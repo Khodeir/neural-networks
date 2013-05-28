@@ -19,3 +19,9 @@ class NeuralNet(object):
             if i < last:
                 data = dot(data, self.weights[i])
         return activities
+
+    def get_layers(self):
+        return self.layers
+
+    def get_weights(self):
+        return self.weights
