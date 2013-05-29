@@ -43,3 +43,19 @@ def train(net, X, T, learning_rate=0.1):
         assert net.layers[i+1].bias.shape == bias_derivatives[i].shape, "Something went wrong here. B and dB are mismatched"
         net.weights[i] -= learning_rate * weight_derivatives[i]
         net.layers[i+1].bias -= learning_rate * bias_derivatives[i]
+
+def gradcheck(network, data, targets):
+    '''Exactly the same idea as backprop, just to confirm the gradients from backprop'''
+    network_dE_dW, network_dE_dB = [], []
+
+    #Some info about what the network's like
+    layers = network.get_layers()
+    num_layers = network.numlayers
+    weights = network.get_weights()
+    weight_vec = []
+    
+    for layer in weights:
+        weight_vec.append(weights.flatten(1)) #Turn it into one long vector
+    
+    epsilon = 0.0001
+    
