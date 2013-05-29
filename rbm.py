@@ -1,24 +1,22 @@
-from numpy import *
-from numpy.matlib import repmat
 from layer import LogisticLayer
-import matplotlib.pyplot as plt
+from network import NeuralNet
+from numpy import *
 
 
-class RBM(object):
+
+class RBM(NeuralNet):
     def __init__(self, numvis, numhid):
         '''Initialize an RBM with numvis visible units and numhid hidden units. The weights are randomly initialized.'''
         self.numvis = numvis
         self.numhid = numhid
-        self.vislayer = LogisticLayer(numvis)
-        self.hidlayer = LogisticLayer(numhid)
-        self.vishid = 0.03*random.randn(numvis, numhid)
+        NeuralNet.__init__(self, [LogisticLayer(numvis), LogisticLayer(numhid)])
 
     def sample_hid(self, data, binary_stochastic=False, dropout=False):
         if dropout:
             drop = (random.random((data.shape)) > random.random((data.shape))).astype(int)
             data -= drop*data
-        hidinput = dot(data, self.vishid)
-        hidprob = self.hidlayer.process(hidinput)
+        hidinput = dot(data, self.weights[0])
+        hidprob = self.layers[1].process(hidinput)
         if binary_stochastic:
             return sample_binary_stochastic(hidprob)
         return hidprob
@@ -27,8 +25,8 @@ class RBM(object):
         if dropout:
             drop = (random.random((data.shape)) > random.random((data.shape))).astype(int)
             data -= drop*data
-        visinput = dot(data, transpose(self.vishid))
-        visprob = self.vislayer.process(visinput)
+        visinput = dot(data, transpose(self.weights[0]))
+        visprob = self.layers[0].process(visinput)
         if binary_stochastic:
             return sample_binary_stochastic(visprob)
         return visprob
@@ -75,37 +73,18 @@ class RBM(object):
 
             N = float(data.shape[0])
             delta_vishid *= momentum
-            delta_vishid += (learning_rate/N)*((expect_pairact_data - expect_pairact_cd) - weightcost*self.vishid)
+            delta_vishid += (learning_rate/N)*((expect_pairact_data - expect_pairact_cd) - weightcost*self.weights[0])
 
             delta_bias_vis *= momentum
             delta_bias_vis += (learning_rate/N)*(expect_bias_vis_data - expect_bias_vis_cd)
             delta_bias_hid *= momentum
             delta_bias_hid += (learning_rate/N)*(expect_bias_hid_data - expect_bias_hid_cd)
 
-            self.vishid += delta_vishid
-            self.vislayer.bias += delta_bias_vis
-            self.hidlayer.bias += delta_bias_hid
+            self.weights[0] += delta_vishid
+            self.layers[0].bias += delta_bias_vis
+            self.layers[1].bias += delta_bias_hid
 
             print 'Reconstruction Error:', recons_error
-
-    def feature_map(self, (featN, featM), (mapN, mapM)):
-        assert self.numvis == featN * featM, 'Number of visible units must not change'
-        vh = transpose(self.vishid)
-        result = zeros((featN*mapN, featM*mapM))
-        row = 0
-        col = 0
-        for i in range(self.numhid):
-            result[row:row+featN, col:col+featM] = vh[i].reshape((featN, featM))
-            col += featM
-            if col == featM*mapM:
-                row += featN
-                col = 0
-        return result
-
-
-def draw(data):
-    plt.imshow(data, cmap=plt.get_cmap('gray'))
-    plt.show()
 
 
 def sample_binary_stochastic(probmat):
