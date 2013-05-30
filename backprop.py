@@ -47,18 +47,57 @@ def train(net, X, T, learning_rate=0.1, decay_rate= 0):
         net.weights[i] -= learning_rate * (weight_derivatives[i] + reg_term)
         net.layers[i+1].bias -= learning_rate * bias_derivatives[i]
 
-def gradcheck(network, data, targets):
-    '''Exactly the same idea as backprop, just to confirm the gradients from backprop'''#Still didn't do this
-    network_dE_dW, network_dE_dB = [], []
-
-    #Some info about what the network's like
-    layers = network.get_layers()
-    num_layers = network.numlayers
-    weights = network.get_weights()
-    weight_vec = []
-    
-    for layer in weights:
-        weight_vec.append(weights.flatten(1)) #Turn it into one long vector
-    
+def gradcheck(network, layer, data, targets):
+    '''Same idea as backprop, just to confirm the gradients'''
+    dE_dW = []
     epsilon = 0.0001
+
+    weights = network.get_weights()
+    temp_weights = weights[:] #Make a copy and work with that so nothing weird happens
+    wmatrix = temp_weights[layer] #Look at derivatives for this layer in particular
+    
+    for i in range(shape(wmatrix)[0]):
+        for j in range(shape(wmatrix)[1]):
+            wmatrix[i][j] += epsilon # w + epsilon
+            temp_weights[layer] = wmatrix
+            network.set_weights(temp_weights) #make these the weights for the network
+            error1 = error(network, data, targets)
+
+            wmatrix[i][j] -= 2*epsilon # w - epsilon
+            temp_weights[layer] = wmatrix
+            network.set_weights(temp_weights)
+            error2 = error(network, data, targets)
+
+            grad = ((error1 - error2)/(2*epsilon))/data.shape[0]
+            dE_dW.append(grad)
+
+            wmatrix[i][j] += epsilon
+            temp_weights[layer] = wmatrix
+            network.set_weights(temp_weights)
+
+    network.set_weights(weights) #Back to original weights
+    return dE_dW
+    
+def error(net, data, T):
+    '''Cross-entropy error. Need this for gradcheck'''
+    Y = net.forward_pass(data)[-1]    
+    weights = net.get_weights()
+    error = -(T*log(Y) + (1-T)*log(1-Y)).sum() #Unregularised error term
+    return error
+
+def testNet():
+    '''Small multi-layer test net for gradient checking, presumably if this works then any sized net works'''
+    net = NeuralNet([LinearLayer(4), LogisticLayer(5), LogisticLayer(3)])
+    data = array([[1, 4, 3, 5],[2.2, 3.1, 0.5, -2],[-0.3, 1, 1, 2.1]]) #Data with 3 training examples
+    targets = array([[0.2, 0.4, -0.1], [1, 2, 3], [-1, -2, -3]]) #3 targets
+
+    dE_dW1, dE_dB1 = backprop(net, data, targets)
+    print 'Gradients from backprop: '
+    print dE_dW1
+    print
+    
+    for i in range(2):
+        print 'Gradients from gradcheck for layer '+str(i) +':'
+        print gradcheck(net, i, data, targets)
+    
     

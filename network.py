@@ -1,6 +1,6 @@
 from numpy import *
 from layer import *
-
+import matplotlib.pyplot as plt
 
 class NeuralNet(object):
     '''A general neural network class.'''
@@ -32,13 +32,16 @@ class NeuralNet(object):
             data = self.layers[i].process(data)
         return [layer.activities for layer in self.layers]
 
-
     def get_layers(self):
         return self.layers
 
     def get_weights(self):
         return self.weights
 
+    def set_weights(self, weights):
+        '''Be careful using this. It could result in bad bugs, I just need this for gradcheck'''
+        self.weights = weights
+        
     def feature_map(self, i, (featN, featM), (mapN, mapM)):
         '''Returns a map of the i'th weight matrix in the network. Each unit in the i+1'th layer corresponds to a
         (featN x featM = layer[i].size) map and there are (mapN x mapM = layer[i+1].size) maps.'''
