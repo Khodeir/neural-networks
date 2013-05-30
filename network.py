@@ -10,10 +10,14 @@ class NeuralNet(object):
         layer_sizes = [layer.size for layer in layers]
         self.numlayers = len(layers)
         self.layers = layers
-        self.weights = []
-        for i in range(self.numlayers-1):  # Random initialisation using heuristic. Uniform distribution [-e,e].
-            epsilon = sqrt(6)/sqrt(layer_sizes[i]+layer_sizes[i+1])
-            self.weights.append(2*epsilon*random.rand(layer_sizes[i], layer_sizes[i+1]) - epsilon)
+        self.weights = [make_matrix(layer_sizes[i], layer_sizes[i+1]) for i in range(self.numlayers - 1)]
+
+    def add_layer(self, layer):
+        '''Adds a layer to the top of the network and initializes a relevant weight matrix'''
+        i = self.numlayers-1  # the index of the old top layer
+        self.layers.append(layer)
+        self.weights.append(make_matrix(self.layers[i].size, self.layers[i+1].size))
+        self.numlayers += 1
 
     def forward_pass(self, data):
         '''The forward pass passes information into the bottom layer of the net and propagates the data up the net'''
@@ -59,6 +63,13 @@ class NeuralNet(object):
                 row += featN
                 col = 0
         return result
+
+
+def make_matrix(insize, outsize):
+    '''Random initialisation using heuristic. Uniform distribution [-e,e].'''
+    epsilon = qrt(6)/sqrt(insize+outsize)
+    weight_matrix = 2*epsilon*random.rand(insize, outsize) - epsilon
+    return weight_matrix
 
 
 def draw(data):

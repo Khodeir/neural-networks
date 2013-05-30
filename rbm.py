@@ -3,7 +3,6 @@ from network import NeuralNet, sample_binary_stochastic
 from numpy import *
 
 
-
 class RBM(NeuralNet):
     def __init__(self, numvis, numhid):
         '''Initialize an RBM with numvis visible units and numhid hidden units. The weights are randomly initialized.'''
