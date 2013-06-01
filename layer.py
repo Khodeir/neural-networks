@@ -3,10 +3,14 @@ from numpy.matlib import repmat
 
 
 class Layer(object):
-    def __init__(self, size):
+    def __init__(self, size, bias=None, activities=None):
         self.size = size
-        self.bias = zeros((1, size))
-        self.activities = zeros((1, size))
+        self.bias = bias if bias is not None else zeros((1, size))
+        self.activities = activities if activities is not None else zeros((1, size))
+
+    @classmethod
+    def from_layer(cls, layer):
+        return cls(layer.size, layer.bias, layer.activities)
 
     def process(self, weighted_input):
         assert False, "This is an abstract class"

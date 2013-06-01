@@ -5,12 +5,15 @@ import matplotlib.pyplot as plt
 
 class NeuralNet(object):
     '''A general neural network class.'''
-    def __init__(self, layers):
+    def __init__(self, layers, weights=None):
         '''Initialize a neural network where layer_sizes describes the number of units in each layer respectively from the bottom-up.'''
         layer_sizes = [layer.size for layer in layers]
         self.numlayers = len(layers)
         self.layers = layers
-        self.weights = [make_matrix(layer_sizes[i], layer_sizes[i+1]) for i in range(self.numlayers - 1)]
+        if weights is None:
+            self.weights = [make_matrix(layer_sizes[i], layer_sizes[i+1]) for i in range(self.numlayers - 1)]
+        else:
+            self.weights = weights
 
     def add_layer(self, layer):
         '''Adds a layer to the top of the network and initializes a relevant weight matrix'''
@@ -19,22 +22,27 @@ class NeuralNet(object):
         self.weights.append(make_matrix(self.layers[i].size, self.layers[i+1].size))
         self.numlayers += 1
 
-    def forward_pass(self, data):
+    def forward_pass(self, data, skip_layer=0):
         '''The forward pass passes information into the bottom layer of the net and propagates the data up the net'''
         last = len(self.weights)
-        for i in range(self.numlayers):
+        if skip_layer > 0:
+            data = dot(data, self.weights[skip_layer-1])
+        for i in range(skip_layer, self.numlayers):
             data = self.layers[i].process(data)
             if i < last:
                 data = dot(data, self.weights[i])
         return [layer.activities for layer in self.layers]
 
-    def backward_pass(self, data):
+    def backward_pass(self, data, skip_layer=0):
         '''The backward pass pretends that data is the state of the top (output) layer and propagates it down the net'''
-        assert False, "Unimplemented"
+
         last = len(self.weights)
-        for i in range(last-1, -1, -1):
-            data = dot(data, self.weights[i].transpose())
+        if skip_layer > 0:
+            data = dot(data, self.weights[last-skip_layer].transpose())
+        for i in range(0, self.numlayers - skip_layer)[::-1]:
             data = self.layers[i].process(data)
+            if i > 0:
+                data = dot(data, self.weights[i-1].transpose())
         return [layer.activities for layer in self.layers]
 
     def get_layers(self):
@@ -65,9 +73,15 @@ class NeuralNet(object):
         return result
 
 
+def dropout(data, rate=0.2):
+    rate = 2*rate
+    drop = (rate*random.random((data.shape)) > random.random((data.shape))).astype(int)
+    return data - data * drop
+
+
 def make_matrix(insize, outsize):
     '''Random initialisation using heuristic. Uniform distribution [-e,e].'''
-    epsilon = qrt(6)/sqrt(insize+outsize)
+    epsilon = sqrt(6)/sqrt(insize+outsize)
     weight_matrix = 2*epsilon*random.rand(insize, outsize) - epsilon
     return weight_matrix
 

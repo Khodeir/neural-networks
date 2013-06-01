@@ -1,37 +1,55 @@
 from layer import LogisticLayer
-from network import NeuralNet, sample_binary_stochastic
+from network import NeuralNet, sample_binary_stochastic, dropout
 from numpy import *
 
 
 class RBM(NeuralNet):
-    def __init__(self, numvis, numhid):
-        '''Initialize an RBM with numvis visible units and numhid hidden units. The weights are randomly initialized.'''
+    def __init__(self, numvis, numhid, vislayer=None, hidlayer=None, vishid=None):
+        '''Initialize an RBM with numvis visible units and numhid hidden units. The weights are randomly initialized
+        explicitly passed in as a parameter.'''
         self.numvis = numvis
         self.numhid = numhid
-        NeuralNet.__init__(self, [LogisticLayer(numvis), LogisticLayer(numhid)])
+        NeuralNet.__init__(self, [vislayer or LogisticLayer(numvis), hidlayer or LogisticLayer(numhid)], vishid)
 
-    def sample_hid(self, data, binary_stochastic=False, dropout=False):
-        if dropout:
-            drop = (random.random((data.shape)) > random.random((data.shape))).astype(int)
-            data -= drop*data
-        hidinput = dot(data, self.weights[0])
-        hidprob = self.layers[1].process(hidinput)
-        if binary_stochastic:
-            return sample_binary_stochastic(hidprob)
+    def get_vislayer(self):
+        return self.layers[0]
+
+    def get_hidlayer(self):
+        return self.layers[1]
+
+    def get_vishid(self):
+        return self.weights[0]
+
+    def sample_hid(self, data):
+        '''Samples the hidden layer of the rbm given the parameter data as the state of the visibles'''
+        hidprob = self.forward_pass(data, skip_layer=1)[1]
         return hidprob
 
-    def sample_vis(self, data, binary_stochastic=False, dropout=True):
-        if dropout:
-            drop = (random.random((data.shape)) > random.random((data.shape))).astype(int)
-            data -= drop*data
-        visinput = dot(data, transpose(self.weights[0]))
-        visprob = self.layers[0].process(visinput)
-        if binary_stochastic:
-            return sample_binary_stochastic(visprob)
+    def sample_vis(self, data):
+        '''Samples the visible layer of the rbm given the parameter data as the state of the hiddens'''
+        visprob = self.backward_pass(data, skip_layer=1)[0]
         return visprob
 
-    def train(self, data, K, epochs, learning_rate=0.1, weightcost=0):
-        '''Train the network using normalized data and CD-k for epochs epochs'''
+    def gibbs_given_h(self, data, K, dropoutrate=0):
+        '''Performs K steps back and forth between hidden and visible starting from the parameter data as the state of the hiddens'''
+        for k in range(K):
+            hidstates = sample_binary_stochastic(data)
+            visprobs_cd = self.sample_vis(dropout(hidstates, dropoutrate))
+            visstates = sample_binary_stochastic(visprobs_cd)
+            hidprobs_cd = self.sample_hid(dropout(visstates, dropoutrate))
+        return visprobs_cd, hidprobs_cd
+
+    def gibbs_given_v(self, data, K, dropoutrate=0):
+        '''Performs K steps back and forth between visible and hidden starting from the parameter data as the state of the visibles'''
+        for k in range(K):
+            visstates = sample_binary_stochastic(data)
+            hidprobs_cd = self.sample_hid(dropout(visstates, dropoutrate))
+            hidstates = sample_binary_stochastic(visprobs_cd)
+            visprobs_cd = self.sample_vis(dropout(hidstates, dropoutrate))
+        return visprobs_cd, hidprobs_cd
+
+    def train(self, data, K, epochs, learning_rate=0.1, weightcost=0.1, dropoutrate=0):
+        '''Train the network using normalized data and CD-K for epochs epochs'''
         assert self.numvis == data.shape[1], "Data does not match number of visible units."
         #got to initialize some vars
         delta_vishid = zeros((self.numvis, self.numhid))
@@ -51,13 +69,8 @@ class RBM(NeuralNet):
             expect_bias_hid_data = hidprobs_data.sum(0)
             expect_bias_vis_data = data.sum(0)
 
-            #now we start the contrastive divergence using stochastic binary hidstates
-            visprobs_cd = data
-            hidprobs_cd = hidprobs_data
-            for k in range(K):
-                hidstates = sample_binary_stochastic(hidprobs_cd)
-                visprobs_cd = self.sample_vis(hidstates)
-                hidprobs_cd = self.sample_hid(visprobs_cd)
+            #now we get the logistic output after K steps of gibbs sampling and use that as probability of turning on
+            visprobs_cd, hidprobs_cd = self.gibbs_given_h(hidprobs_data, K, dropoutrate)
 
             #now we compute the negative statistics for contrastive divergence, Expected(sisj)_model
             expect_pairact_cd = dot(transpose(visprobs_cd), hidprobs_cd)
