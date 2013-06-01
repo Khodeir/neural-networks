@@ -34,7 +34,16 @@ class LogisticLayer(Layer):
         #In logistic units, dy/dz = y*(1-y)
         return self.activities * (1 - self.activities)
 
+class TanhLayer(Layer):
+    '''A fast changing logistic function'''
+    def process(self, weighted_input):
+        self.activities = tanh(weighted_input + self.repbias(weighted_input))
+        return self.activities
 
+    def gradient(self):
+        #dy/dz = 1-y^2
+        return (1 - (self.activities*self.activities))
+    
 class BinaryStochasticLayer(LogisticLayer):
     def process(self, weighted_input):
         probs = LogisticLayer.process(self, weighted_input)
