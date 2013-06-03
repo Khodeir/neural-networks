@@ -61,21 +61,10 @@ class NeuralNet(object):
         assert self.layers[i].size == featN * featM, 'Number of units in the ith layer must equal featN*featM'
         assert self.layers[i+1].size == mapN * mapM, 'Number of units in the i+1th layer must equal mapN*mapM'
         vh = transpose(self.weights[i])
-        result = zeros((featN*mapN, featM*mapM))
-        row = 0
-        col = 0
-        for i in range(self.layers[i+1].size):
-            result[row:row+featN, col:col+featM] = vh[i].reshape((featN, featM))
-            col += featM
-            if col == featM*mapM:
-                row += featN
-                col = 0
-        return result
-
+        return data_map(vh, (featN, featM), (mapN, mapM))
 
 def dropout(data, rate=0.2):
-    rate = 2*rate
-    drop = (rate*random.random((data.shape)) > random.random((data.shape))).astype(int)
+    drop = random.binomial(1, rate, data.shape)
     return data - data * drop
 
 
@@ -85,7 +74,22 @@ def make_matrix(insize, outsize):
     weight_matrix = 2*epsilon*random.rand(insize, outsize) - epsilon
     return weight_matrix
 
+# We should probably move the below functions to another class?
 
 def draw(data):
     plt.imshow(data, cmap=plt.get_cmap('gray'))
     plt.show()
+
+
+def data_map(data, (featN, featM), (mapN, mapM)):
+    result = zeros((featN*mapN, featM*mapM))
+    numMaps = mapN * mapM
+    row = 0
+    col = 0
+    for i in range(numMaps):
+        result[row:row+featN, col:col+featM] = data[i].reshape((featN, featM))
+        col += featM
+        if col == featM*mapM:
+            row += featN
+            col = 0
+    return result

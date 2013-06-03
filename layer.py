@@ -12,6 +12,10 @@ class Layer(object):
     def from_layer(cls, layer):
         return cls(layer.size, layer.bias, layer.activities)
 
+    def switch_type(self, newlayertype):
+        '''Switch the layer to the given newlayertype'''
+        self.__class__ = newlayertype
+
     def process(self, weighted_input):
         assert False, "This is an abstract class"
 
@@ -43,7 +47,7 @@ class TanhLayer(Layer):
     def gradient(self):
         #dy/dz = 1-y^2
         return (1 - (self.activities*self.activities))
-    
+
 class BinaryStochasticLayer(LogisticLayer):
     def process(self, weighted_input):
         probs = LogisticLayer.process(self, weighted_input)

@@ -9,7 +9,8 @@ class RBM(NeuralNet):
         explicitly passed in as a parameter.'''
         self.numvis = numvis
         self.numhid = numhid
-        NeuralNet.__init__(self, [vislayer or LogisticLayer(numvis), hidlayer or LogisticLayer(numhid)], vishid)
+        weights = [vishid] if vishid is not None else None
+        NeuralNet.__init__(self, [vislayer or LogisticLayer(numvis), hidlayer or LogisticLayer(numhid)], weights)
 
     def get_vislayer(self):
         return self.layers[0]
@@ -87,8 +88,8 @@ class RBM(NeuralNet):
             delta_vishid *= momentum
             delta_vishid += (learning_rate/N)*((expect_pairact_data - expect_pairact_cd) - weightcost*self.weights[0])
 
-            delta_bias_vis *= momentum
-            delta_bias_vis += (learning_rate/N)*(expect_bias_vis_data - expect_bias_vis_cd)
+            # delta_bias_vis *= momentum
+            # delta_bias_vis += (learning_rate/N)*(expect_bias_vis_data - expect_bias_vis_cd)
             delta_bias_hid *= momentum
             delta_bias_hid += (learning_rate/N)*(expect_bias_hid_data - expect_bias_hid_cd)
 

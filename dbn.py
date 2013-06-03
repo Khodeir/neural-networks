@@ -25,11 +25,9 @@ class BN(object):
         return cls(layers, up_weights, down_weights)
 
     def bottom_up(self, data):
-        self.upnet.layers[0].activities = data
         return self.upnet.forward_pass(data, 1)
 
     def top_down(self, data):
-        self.downnet.layers[0].activities = data
         return self.downnet.forward_pass(data, 1)
 
 
@@ -57,7 +55,7 @@ class DBN(object):
     def generate_data(self, startingstate, k):
         '''To generate data from the dbn, we perform k steps of gibbs sampling given the
         state of the hiddens of the top_layer_rbm, then do a top_down pass on the bottom_layers'''
-
-        visprobs_top_rbm, _ = self.top_layer_rbm.gibbs_given_h(startingstate, k)
+        print 'starting gibbs with', startingstate.shape
+        visprobs_top_rbm = self.top_layer_rbm.gibbs_given_h(startingstate, k)[0]
         activities = self.bottom_layers.top_down(visprobs_top_rbm)
-        return activities[-1]
+        return activities
