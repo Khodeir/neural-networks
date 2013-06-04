@@ -5,12 +5,14 @@ class BN(object):
     '''A BN is a bidirectional NeuralNet. It is equivelant to two opposite direction feed forward nets.'''
     def __init__(self, layers, up_weights=None, down_weights=None):
         '''Initializes a BN from the layers given'''
+        self.numlayers = len(layers)
         self.upnet = NeuralNet(layers, up_weights)
         self.downnet = NeuralNet(layers[::-1], down_weights)
 
     @classmethod
     def from_rbms(cls, rbms):
-        '''Initializes a BN from a list of RBMS'''
+        '''Initializes a BN from a list of RBMS. NOTE: the down weights and upweights are tied.
+        Modifying one, modifies the other. To untie, call the __untie__ method.'''
         layers = []
 
         # First layer of dbn is the visible layer of the bottom rbm
@@ -30,6 +32,12 @@ class BN(object):
     def top_down(self, data):
         return self.downnet.forward_pass(data, 1)
 
+    def __untie_weights__(self):
+        '''This is an ugly step, and is only necessary when the db is initialized from RBMs.
+        It unties the recognition weights from the generative ones.'''
+        numweights = self.numlayers - 1
+        for i in range(numweights):
+            self.downnet.weights[i] = self.upnet.weights[i].copy()
 
 class DBN(object):
     def __init__(self, bottom_layers, top_layer_rbm):
