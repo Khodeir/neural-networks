@@ -1,6 +1,8 @@
-from scipy.io import savemat
+from scipy.io import savemat, loadmat
+from rbm import RBM
 class RBMStack(object):
     def __init__(self, data, rbms):
+        '''Assumes for all rbm[i] in rbms, rbm[i].numhid == rbm[i+1].numvis'''
         self.rbms = rbms
         self.data = data
 
@@ -32,8 +34,27 @@ class RBMStack(object):
 
     def save_to_matfile(self, matfilename):
         data = {}
+        data['numrbms'] = len(self.rbms)
+        data['stack_data'] = self.data
         for mac_i in range(len(self.rbms)):
             data[str(mac_i)+"_visbias"] = self.rbms[mac_i].get_vislayer().bias
             data[str(mac_i)+"_hidbias"] = self.rbms[mac_i].get_hidlayer().bias
             data[str(mac_i)+"_vishid"] = self.rbms[mac_i].get_vishid()
         savemat(matfilename, data)
+
+    @classmethod
+    def load_from_matfile(cls, matfilename):
+        data = loadmat(matfilename)
+        stack_data = data.get('stack_data')
+        numrbms = data.get('numrbms')
+        rbms = []
+        for mac_i in range(numrbms):
+            vbias = data.get(str(mac_i)+"_visbias")
+            hbias = data.get(str(mac_i)+"_hidbias")
+            vishid = data.get(str(mac_i)+"_vishid")
+            rbm = RBM(vbias.size, hbias.size)
+            rbm.get_vislayer().bias = vbias
+            rbm.get_hidlayer().bias = hbias
+            rbm.weights[0] = vishid
+            rbms.append(rbm)
+        return cls(stack_data, rbms)

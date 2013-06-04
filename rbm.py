@@ -49,14 +49,13 @@ class RBM(NeuralNet):
             visprobs_cd = self.sample_vis(dropout(hidstates, dropoutrate))
         return visprobs_cd, hidprobs_cd
 
-    def train(self, data, K, epochs, learning_rate=0.1, weightcost=0.1, dropoutrate=0):
+    def train(self, data, K, epochs, learning_rate=0.1, weightcost=0.1, momentum=0.7, dropoutrate=0):
         '''Train the network using normalized data and CD-K for epochs epochs'''
         assert self.numvis == data.shape[1], "Data does not match number of visible units."
         #got to initialize some vars
         delta_vishid = zeros((self.numvis, self.numhid))
         delta_bias_vis = zeros((1, self.numvis))
         delta_bias_hid = zeros((1, self.numhid))
-        momentum = 0.9
 
   #start epochs
         for epoch in range(epochs):
