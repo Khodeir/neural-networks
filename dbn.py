@@ -59,7 +59,7 @@ class BN(object):
             lower_state = hid_states[i]
             lower_activity = hid_probs[i]
 
-            delta = dot(upper_state.transpose(), (lower_state - lower_activity))
+            delta = dot(upper_state.transpose(), (lower_state - lower_activity))/data.shape(0)
 
             wake_deltas.insert(0,delta)
 
@@ -84,7 +84,7 @@ class BN(object):
             upper_state = hid_states[i]
             upper_activity = hid_probs[i]
 
-            delta = dot(lower_state.transpose(), (upper_state - upper_activity))
+            delta = dot(lower_state.transpose(), (upper_state - upper_activity))/data.shape(0)
             sleep_deltas.insert(0,delta)
 
         return sleep_deltas
