@@ -45,7 +45,7 @@ class RBM(NeuralNet):
         for k in range(K):
             visstates = sample_binary_stochastic(data)
             hidprobs_cd = self.sample_hid(dropout(visstates, dropoutrate))
-            hidstates = sample_binary_stochastic(visprobs_cd)
+            hidstates = sample_binary_stochastic(hidprobs_cd)
             visprobs_cd = self.sample_vis(dropout(hidstates, dropoutrate))
         return visprobs_cd, hidprobs_cd
 
