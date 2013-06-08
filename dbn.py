@@ -44,7 +44,7 @@ class BN(object):
         It unties the recognition weights from the generative ones.'''
         numweights = self.numlayers - 1
         for i in range(numweights):
-            self.downnet.weights[i] = self.downnet.weights[i].copy()
+            self.upnet.weights[i] = self.upnet.weights[i].copy()
 
     def wake_phase(self, data):
         '''The first step of wake-sleep and contrastive wake-sleep. Returns wake_deltas, a list of matrices by which the

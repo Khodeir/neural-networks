@@ -49,7 +49,7 @@ class RBM(NeuralNet):
             visact = self.sample_vis(dropout(hidact, dropoutrate))
         return visact, hidact
 
-    def train(self, data, K, learning_rate=0.1, weightcost=0.1, dropoutrate=0):
+    def train(self, data, K, learning_rate=0.1, weightcost=0.0001, dropoutrate=0):
         '''Train the network using normalized data and CD-K for epochs epochs'''
         assert self.numvis == data.shape[1], "Data does not match number of visible units."
         #got to initialize some vars
