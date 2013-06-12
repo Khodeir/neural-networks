@@ -10,7 +10,7 @@ class Layer(object):
 
     @classmethod
     def from_layer(cls, layer):
-        return cls(layer.size, layer.bias, layer.activities)
+        return cls(layer.size, layer.bias.copy(), layer.activities.copy())
 
     def switch_type(self, newlayertype):
         '''Switch the layer to the given newlayertype'''

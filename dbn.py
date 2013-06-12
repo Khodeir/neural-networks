@@ -7,7 +7,8 @@ class BN(object):
     def __init__(self, layers, up_weights=None, down_weights=None):
         '''Initializes a BN from the layers given'''
         self.numlayers = len(layers)
-        down_layers = list(layers[::-1])#Copy the list so that upnet and downnet layers are different objects
+
+        down_layers = [layer.__class__.from_layer(layer) for layer in layers[::-1]]#Copy the list so that upnet and downnet layers are different objects
         self.upnet = NeuralNet(layers, up_weights)
         self.downnet = NeuralNet(down_layers, down_weights)
 
