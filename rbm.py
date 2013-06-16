@@ -59,9 +59,9 @@ class RBM(NeuralNet):
         '''Train the network using normalized data and CD-K for epochs epochs'''
         assert self.numvis == data.shape[1], "Data does not match number of visible units."
         #got to initialize some vars
-        delta_vishid = zeros((self.numvis, self.numhid))
-        delta_bias_vis = zeros((1, self.numvis))
-        delta_bias_hid = zeros((1, self.numhid))
+        #delta_vishid = zeros((self.numvis, self.numhid))
+        #delta_bias_vis = zeros((1, self.numvis))
+        #delta_bias_hid = zeros((1, self.numhid))
 
         #get the acivation probabilities for hidden units on each data case
         self.get_vislayer().probs = data
@@ -73,7 +73,7 @@ class RBM(NeuralNet):
 
         #The same quantitiy for our biases, Expected(si)_data (i.e. bias unit is always 1)
         expect_bias_hid_data = hidprobs_data.sum(0)
-        expect_bias_vis_data = data.sum(0)
+        #expect_bias_vis_data = data.sum(0)
 
         #now we get the logistic output after K steps of gibbs sampling and use that as probability of turning on
         self.gibbs_given_h(hidact_data, K, dropoutrate)
@@ -84,19 +84,19 @@ class RBM(NeuralNet):
 
         #again negative stats for learning the biases
         expect_bias_hid_cd = hidprobs_cd.sum(0)
-        expect_bias_vis_cd = visprobs_cd.sum(0)
+        #expect_bias_vis_cd = visprobs_cd.sum(0)
 
         recons_error = square(data - visprobs_cd).sum()
 
         #learning time
 
         N = float(data.shape[0])
-        delta_vishid += (learning_rate/N)*((expect_pairact_data - expect_pairact_cd) - weightcost*self.weights[0])
+        delta_vishid = (learning_rate/N)*((expect_pairact_data - expect_pairact_cd) - weightcost*self.weights[0])
         # delta_bias_vis += (learning_rate/N)*(expect_bias_vis_data - expect_bias_vis_cd)
-        delta_bias_hid += (learning_rate/N)*(expect_bias_hid_data - expect_bias_hid_cd)
+        delta_bias_hid = (learning_rate/N)*(expect_bias_hid_data - expect_bias_hid_cd)
 
         self.weights[0] += delta_vishid
-        self.layers[0].bias += delta_bias_vis
+        #self.layers[0].bias += delta_bias_vis
         self.layers[1].bias += delta_bias_hid
 
         #print 'Reconstruction Error:', recons_error
