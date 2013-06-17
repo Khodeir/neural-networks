@@ -61,7 +61,9 @@ class LinearLayer(Layer):
     def process(self, weighted_input):
         self.activities = weighted_input + self.repbias(weighted_input)
         return self.activities
-
+    def gradient(self):
+        return 1
+        
 class LinearThresholdLayer(Layer):
     def process(self, weighted_input):
         activity = weighted_input + self.repbias(weighted_input)
