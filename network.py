@@ -132,7 +132,7 @@ class NeuralNet(object):
         plt.figure()
         plt.xlabel("Size of Weights")
         plt.ylabel("Frequency")
-        plt.hist(vishid, bins=300)
+        plt.hist(vishid, bins=100)
         plt.show()
         return vishid
 
@@ -151,7 +151,7 @@ class NeuralNet(object):
         plt.figure()
         plt.xlabel("Size of Weights")
         plt.ylabel("Frequency")
-        plt.hist(vishid, bins=300)
+        plt.hist(biases, bins=100)
         plt.show()
         return biases
 

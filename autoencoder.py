@@ -5,14 +5,14 @@ from backprop import backprop, train
 from optimise import *
 from copy import deepcopy
 ###############################
-from scipy.io import loadmat
+# from scipy.io import loadmat
 
-data = loadmat('MNIST60k.mat')['datamat']
-training_inputs = data[0][0][0]
-validation_inputs = data[0][0][2]
-error_batch = training_inputs[0:1000]
-input_valid_batches = [validation_inputs[i:i+100] for i in range(0, 10000, 100)]
-test = input_valid_batches[8]
+# data = loadmat('MNIST60k.mat')['datamat']
+# training_inputs = data[0][0][0]
+# validation_inputs = data[0][0][2]
+# train_batch = training_inputs[0:1000]
+# input_valid_batches = [validation_inputs[i:i+100] for i in range(0, 10000, 100)]
+# test = input_valid_batches[8]
 ################################
 class AutoEncoder(object):
     '''An Autoencoder is made of an encoder and decoder, specified by the layer sizes.'''
@@ -122,7 +122,7 @@ def train_ae(ae, training_inputs, epochs=5, learning_rate=0.2, batch_size=100, n
     if get_error:
         return errors
 
-def train_cg(ae, training_inputs, epochs=1, batch_size=1000, noise=0.3):
+def train_cg(ae, training_inputs, epochs=1, batch_size=1000, noise=0.25):
     '''Trains an autoencoder on data using Conjugate Gradient'''
     corrupt_training_inputs = dropout(training_inputs, noise) #Add noise to input if you want
     input_batches = [training_inputs[i:i+batch_size] for i in range(0, training_inputs.shape[0], batch_size)] #Split to mini-batches
@@ -133,7 +133,7 @@ def train_cg(ae, training_inputs, epochs=1, batch_size=1000, noise=0.3):
         guess = ae.flatten_parameters()
         for i in range(len(input_batches)):
             print 'Iteration Number: ', i
-            result = CG(ae, guess, corrupt_input_batches[i], input_batches[i], maxiter=20) #Investigate the maxiter value
+            result = CG(ae, guess, corrupt_input_batches[i], input_batches[i], maxiter=10) #Investigate the maxiter value
             guess = result.x
 
     return guess
