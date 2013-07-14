@@ -122,7 +122,7 @@ def train_ae(ae, training_inputs, epochs=5, learning_rate=0.2, batch_size=100, n
     if get_error:
         return errors
 
-def train_cg(ae, training_inputs, epochs=1, batch_size=1000, noise=0.25):
+def train_cg(ae, training_inputs, epochs=1, batch_size=1000, noise=0.25, maxiter=10):
     '''Trains an autoencoder on data using Conjugate Gradient'''
     corrupt_training_inputs = dropout(training_inputs, noise) #Add noise to input if you want
     input_batches = [training_inputs[i:i+batch_size] for i in range(0, training_inputs.shape[0], batch_size)] #Split to mini-batches
@@ -133,7 +133,7 @@ def train_cg(ae, training_inputs, epochs=1, batch_size=1000, noise=0.25):
         guess = ae.flatten_parameters()
         for i in range(len(input_batches)):
             print 'Iteration Number: ', i
-            result = CG(ae, guess, corrupt_input_batches[i], input_batches[i], maxiter=10) #Investigate the maxiter value
+            result = CG(ae, guess, corrupt_input_batches[i], input_batches[i], maxiter=maxiter) #Investigate the maxiter value
             guess = result.x
 
     return guess
