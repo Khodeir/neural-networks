@@ -30,8 +30,9 @@ class NeuralNet(object):
         if skip_layer > 0:
             data = dot(data, self.weights[skip_layer-1])
         for i in range(skip_layer, self.numlayers):
-            data = dropout(self.layers[i].process(data), self.dropoutrate)
+            self.layers[i].process(data)
             if i < last:
+                data = self.layers[i].activities = dropout(self.layers[i].activities, self.dropoutrate)
                 data = dot(data, self.weights[i])
         return [layer.activities for layer in self.layers]
 
