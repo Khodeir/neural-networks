@@ -173,7 +173,7 @@ class DBN(object):
         if rbm_data_func is not None:
             top_state = rbm_data_func(top_state)
 
-        self.top_layer_rbm.train(top_state, K, learning_rate, dropoutrate=0)
+        self.top_layer_rbm.train(top_state, K, learning_rate)
         top_state = self.top_layer_rbm.get_vislayer().probs
         #Get a vis state from RBM after CD-k, use this as data for top-down pass
         #top_state = self.top_layer_rbm.gibbs_given_v(top_state, K)[0]

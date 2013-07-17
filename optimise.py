@@ -10,6 +10,12 @@ def cross_err(x, network, data, targets):
 
 	return error(network, data, targets, decay_rate=0)
 
+def squared_err(x, network, data, targets):
+
+	network.set_parameters(x)
+
+	return square(network.forward_pass(data)[-1] - targets).sum()
+
 def deriv(x, network, data, targets):
 	'''Network error derivatives using backprop. x is a single vector with all of a network's parameters.'''
 

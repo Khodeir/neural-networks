@@ -1,5 +1,5 @@
 from layer import *
-from network import NeuralNet, sample_binary_stochastic, dropout
+from network import NeuralNet, sample_binary_stochastic
 from numpy import *
 
 
@@ -31,23 +31,23 @@ class RBM(NeuralNet):
         data = self.backward_pass(data, skip_layer=1)[0]
         return self.get_vislayer().probs if prob else data
 
-    def gibbs_given_h(self, data, K, dropoutrate=0):
+    def gibbs_given_h(self, data, K):
         '''Performs K steps back and forth between hidden and visible starting from the parameter data as the state of the hiddens.
         data is assumed to be the current activation of h.'''
         hidact = data
         visact = None
         for k in range(K):
-            visact = self.sample_vis(dropout(hidact, dropoutrate))
-            hidact = self.sample_hid(dropout(visact, dropoutrate))
+            visact = self.sample_vis(hidact)
+            hidact = self.sample_hid(visact)
         return visact, hidact
 
-    def gibbs_given_v(self, data, K, dropoutrate=0):
+    def gibbs_given_v(self, data, K):
         '''Performs K steps back and forth between visible and hidden starting from the parameter data as the state of the visibles.
         data is assumed to be the current activation of v'''
         visact = data
         for k in range(K):
-            hidact = self.sample_hid(dropout(visact, dropoutrate))
-            visact = self.sample_vis(dropout(hidact, dropoutrate))
+            hidact = self.sample_hid(visact)
+            visact = self.sample_vis(hidact)
         return visact, hidact
 
     def reconstruction_error(self, data, K=1):
@@ -55,7 +55,7 @@ class RBM(NeuralNet):
         visprobs = self.get_vislayer().probs
         return square(data - visprobs).sum()
 
-    def train(self, data, K, learning_rate=0.05, bias_learn_rate =0.1, weightcost=0.0001, dropoutrate=0):
+    def train(self, data, K, learning_rate=0.05, bias_learn_rate =0.1, weightcost=0.0001):
         '''Train the network using normalized data and CD-K for epochs epochs'''
         assert self.numvis == data.shape[1], "Data does not match number of visible units."
 
@@ -72,7 +72,7 @@ class RBM(NeuralNet):
         #expect_bias_vis_data = data.sum(0)
 
         #now we get the logistic output after K steps of gibbs sampling and use that as probability of turning on
-        self.gibbs_given_h(hidact_data, K, dropoutrate)
+        self.gibbs_given_h(hidact_data, K)
         visprobs_cd, hidprobs_cd = self.get_vislayer().probs, self.get_hidlayer().probs
 
         #now we compute the negative statistics for contrastive divergence, Expected(sisj)_model

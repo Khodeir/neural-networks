@@ -15,6 +15,7 @@ class NeuralNet(object):
             self.weights = [make_matrix(layer_sizes[i], layer_sizes[i+1]) for i in range(self.numlayers - 1)]
         else:
             self.weights = weights
+        self.dropoutrate = 0
 
     def add_layer(self, layer):
         '''Adds a layer to the top of the network and initializes a relevant weight matrix'''
@@ -29,7 +30,7 @@ class NeuralNet(object):
         if skip_layer > 0:
             data = dot(data, self.weights[skip_layer-1])
         for i in range(skip_layer, self.numlayers):
-            data = self.layers[i].process(data)
+            data = dropout(self.layers[i].process(data), self.dropoutrate)
             if i < last:
                 data = dot(data, self.weights[i])
         return [layer.activities for layer in self.layers]
