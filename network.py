@@ -15,7 +15,6 @@ class NeuralNet(object):
             self.weights = [make_matrix(layer_sizes[i], layer_sizes[i+1]) for i in range(self.numlayers - 1)]
         else:
             self.weights = weights
-        self.dropoutrate = 0
 
     def add_layer(self, layer):
         '''Adds a layer to the top of the network and initializes a relevant weight matrix'''
@@ -32,8 +31,7 @@ class NeuralNet(object):
         for i in range(skip_layer, self.numlayers):
             self.layers[i].process(data)
             if i < last:
-                data = self.layers[i].activities = dropout(self.layers[i].activities, self.dropoutrate)
-                data = dot(data, self.weights[i])
+                data = dot(self.layers[i].activities, self.weights[i])
         return [layer.activities for layer in self.layers]
 
     def backward_pass(self, data, skip_layer=0):
@@ -43,9 +41,9 @@ class NeuralNet(object):
         if skip_layer > 0:
             data = dot(data, self.weights[last-skip_layer].transpose())
         for i in range(0, self.numlayers - skip_layer)[::-1]:
-            data = self.layers[i].process(data)
+            self.layers[i].process(data)
             if i > 0:
-                data = dot(data, self.weights[i-1].transpose())
+                data = dot(self.layers[i].activities, self.weights[i-1].transpose())
         return [layer.activities for layer in self.layers]
 
     def get_layers(self):
@@ -156,10 +154,6 @@ class NeuralNet(object):
         plt.hist(biases, bins=100)
         plt.show()
         return biases
-
-def dropout(data, rate=0.2):
-    drop = random.binomial(1, rate, data.shape)
-    return data - data * drop
 
 
 def make_matrix(insize, outsize):

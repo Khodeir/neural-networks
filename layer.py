@@ -3,10 +3,11 @@ from numpy.matlib import repmat
 
 
 class Layer(object):
-    def __init__(self, size, bias=None, activities=None):
+    def __init__(self, size, bias=None, activities=None, dropoutrate=0):
         self.size = size
         self.bias = bias if bias is not None else zeros((1, size))
         self.activities = activities if activities is not None else zeros((1, size))
+        self.dropoutrate = dropoutrate
 
     @classmethod
     def from_layer(cls, layer):
@@ -17,6 +18,9 @@ class Layer(object):
         self.__class__ = newlayertype
 
     def process(self, weighted_input):
+        self.activities = dropout(self.act(weighted_input), self.dropoutrate)
+
+    def act(self, weighted_input):
         assert False, "This is an abstract class"
 
     def gradient(self):
@@ -30,9 +34,8 @@ class Layer(object):
 
 
 class LogisticLayer(Layer):
-    def process(self, weighted_input):
-        self.activities = 1/(1 + exp(-(weighted_input + self.repbias(weighted_input))))
-        return self.activities
+    def act(self, weighted_input):
+        return 1/(1 + exp(-(weighted_input + self.repbias(weighted_input))))
 
     def gradient(self):
         #In logistic units, dy/dz = y*(1-y)
@@ -40,9 +43,8 @@ class LogisticLayer(Layer):
 
 class TanhLayer(Layer):
     '''A fast changing logistic function'''
-    def process(self, weighted_input):
-        self.activities = tanh(weighted_input + self.repbias(weighted_input))
-        return self.activities
+    def act(self, weighted_input):
+        return tanh(weighted_input + self.repbias(weighted_input))
 
     def gradient(self):
         #dy/dz = 1-y^2
@@ -52,31 +54,27 @@ class BinaryStochasticLayer(LogisticLayer):
     def __init__(self, size, bias=None, activities=None):
         LogisticLayer.__init__(self, size, bias, activities)
         self.probs = self.activities.copy()
-    def process(self, weighted_input):
-        self.probs = LogisticLayer.process(self, weighted_input)
-        self.activities = sample_binary_stochastic(self.probs)
-        return self.activities
+    def act(self, weighted_input):
+        self.probs = LogisticLayer.act(self, weighted_input)
+        return sample_binary_stochastic(self.probs)
     def gradient(self):
         #Use probs instead of activities, dy/dz = y*(1-y). So that backprop works with BinaryStochastic
         return self.probs * (1 - self.probs)
 
 class LinearLayer(Layer):
-    def process(self, weighted_input):
-        self.activities = weighted_input + self.repbias(weighted_input)
-        return self.activities
+    def act(self, weighted_input):
+        return weighted_input + self.repbias(weighted_input)
     def gradient(self):
         return 1
         
 class LinearThresholdLayer(Layer):
-    def process(self, weighted_input):
+    def act(self, weighted_input):
         activity = weighted_input + self.repbias(weighted_input)
-        self.activities = activity*(activity >= 0) #If activity is negative, output a 0
-        return self.activities
+        return activity*(activity >= 0) #If activity is negative, output a 0
 
 class BinaryThresholdLayer(Layer):
-    def process(self, weighted_input):
-        self.activities = ((weighted_input + self.repbias(weighted_input)) > zeros((1, self.size))).astype(int)
-        return self.activities
+    def act(self, weighted_input):
+        return ((weighted_input + self.repbias(weighted_input)) > zeros((1, self.size))).astype(int)
 
 
 class SoftMax(Layer):
@@ -85,11 +83,10 @@ class SoftMax(Layer):
         max_big = repmat(max_small, a.shape[1], 1).transpose()
         return log(exp(a - max_big).sum(1)) + max_small
 
-    def process(self, weighted_input):
+    def act(self, weighted_input):
         normalizer = self.normalizer(weighted_input).reshape((1, weighted_input.shape[0]))
         log_prob = weighted_input - repmat(normalizer, weighted_input.shape[1], 1).transpose()
-        self.activities = exp(log_prob)
-        return self.activities
+        return exp(log_prob)
 
     def gradient(self):
         return self.activities * (1 - self.activities)
@@ -102,12 +99,13 @@ class HybridLayer(SoftMax, BinaryStochasticLayer):
         self.probs = self.activities.copy()
         self.activitiesA = zeros((1, sizeA))
 
-    def process(self, weighted_input):
-        SoftMax.process(self, weighted_input[:,0:self.sizeA])
-        self.activitiesA = (self.activities - self.activities.max(1).reshape((weighted_input.shape[0], 1)) == 0).astype(int)
+    def act(self, weighted_input):
+        actA = SoftMax.act(self, weighted_input[:,0:self.sizeA])
+        self.activitiesA = (actA - actA.max(1).reshape((weighted_input.shape[0], 1)) == 0).astype(int)
         self.probs = 1/(1 + exp(-(weighted_input[:,self.sizeA:] + self.repbias(weighted_input[:,self.sizeA:], self.sizeA))))
         self.probs = concatenate((self.activitiesA, self.probs), axis=1)
-        self.activities = concatenate((self.activitiesA, sample_binary_stochastic(self.probs[:,self.sizeA:])), axis=1)
+        
+        return concatenate((self.activitiesA, sample_binary_stochastic(self.probs[:,self.sizeA:])), axis=1)
 
     def repbias(self, data, startIndex=0):
         '''Replicates the bias vector in so that it can be used in matrix operations with data'''
@@ -115,3 +113,8 @@ class HybridLayer(SoftMax, BinaryStochasticLayer):
 
 def sample_binary_stochastic(probmat):
     return (probmat > random.random(probmat.shape)).astype(int)
+def dropout(data, rate=0.2):
+    if rate == 0:
+        return data
+    drop = random.binomial(1, rate, data.shape)
+    return data - data * drop
