@@ -1,5 +1,4 @@
 from numpy import *
-from layer import *
 from scipy.io import savemat, loadmat
 import matplotlib.pyplot as plt
 

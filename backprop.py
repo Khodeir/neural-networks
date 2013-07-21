@@ -8,7 +8,7 @@ def dE_cross_entropy(Y, T):
 def dE_squared_error(Y, T):
     return -2*(T-Y)
 
-def backprop(network, data, targets, skip_layers=0, dE_func=dE_cross_entropy):
+def backprop(network, data, targets, skip_layers=0, tau=0, dE_func=dE_cross_entropy):
     '''data is a matrix of nxv training data. targets has all the target values of the data.
     Backprop returns a list of matrices, network_dE_dW.
     The list contains l-matrices, where l is the number of layers in the network.
@@ -37,35 +37,24 @@ def backprop(network, data, targets, skip_layers=0, dE_func=dE_cross_entropy):
         dE_dW = dot(layer_activities[j-1].transpose(), dE_dZ)/data.shape[0]  # Normalised dE/dW matrix for this layer over all training examples
         dE_dB = (dE_dZ.sum(0).reshape((1, layers[j].size)))/data.shape[0]
 
+        decay_term = (tau/data.shape[0])*net.weights[i]
+        dE_dW += decay_term
+
         network_dE_dW.insert(0, dE_dW)  # Put this at the front of the list of network deltas
         network_dE_dB.insert(0, dE_dB)
+
     return network_dE_dW, network_dE_dB
 
-def flat_grad(network, data, targets, dE_func=dE_cross_entropy):
-    '''Return gradients as a single row vector, to be passed to optimisation algorithms. Ascending order of layer de/dWs, then layer dE/dBs'''
-    a,b = backprop(network, data, targets, dE_func)
-    flat_grad = []
-
-    for matrix in a:
-        flat_grad = concatenate((flat_grad, matrix.flatten()),1)
-    for matrix in b:
-        flat_grad = concatenate((flat_grad, matrix.flatten()),1)
-
-    return flat_grad
-
-def train(net, X, T, learning_rate=0.1, decay_rate=0, dE_func=dE_cross_entropy):
+def train(net, X, T, learning_rate=0.1, tau=0, dE_func=dE_cross_entropy):
     '''Perform one iteration of backpropagation training on net using inputs X and targets T and a learning_rate'''
-    weight_derivatives, bias_derivatives = backprop(net, X, T, dE_func=dE_cross_entropy)
+    weight_derivatives, bias_derivatives = backprop(net, X, T, dE_func=dE_cross_entropy, tau)
 
     for i in range(len(net.weights)):
         assert net.weights[i].shape == weight_derivatives[i].shape, "Something went wrong here. W and dW are mismatched"
         assert net.layers[i+1].bias.shape == bias_derivatives[i].shape, "Something went wrong here. B and dB are mismatched"
 
-        reg_term = (decay_rate/X.shape[0])*net.weights[i]  # Regularisation term to be added to dE/dW for the given layer
-
-        net.weights[i] -= learning_rate * (weight_derivatives[i] + reg_term)
+        net.weights[i] -= learning_rate * weight_derivatives[i]
         net.layers[i+1].bias -= learning_rate * bias_derivatives[i]
-
 
 def testNet():
     '''Small multi-layer test net for gradient checking, presumably if this works then any sized net works'''

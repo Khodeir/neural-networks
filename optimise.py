@@ -15,7 +15,15 @@ def deriv(x, network, data, targets, error_func=error, dE_func=dE_cross_entropy)
 
 	network.set_parameters(x)
 
-	return flat_grad(network, data, targets, dE_func)
+	a,b = backprop(network, data, targets, tau=0, dE_func= dE_func)
+    flat_grad = []
+
+    for matrix in a:
+        flat_grad = concatenate((flat_grad, matrix.flatten()),1)
+    for matrix in b:
+        flat_grad = concatenate((flat_grad, matrix.flatten()),1)
+
+	return flat_grad
 
 def BFGS(network, data, targets, maxiter=1000, error_func=error, dE_func=dE_cross_entropy):
 	initial = network.flatten_parameters()

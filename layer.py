@@ -1,7 +1,6 @@
 from numpy import *
 from numpy.matlib import repmat
 
-
 class Layer(object):
     def __init__(self, size, bias=None, activities=None, dropoutrate=0):
         self.size = size
