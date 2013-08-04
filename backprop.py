@@ -29,18 +29,20 @@ def backprop(network, data, targets, tau=0, skip_layers=0, dE_func=dE_cross_entr
     # Using cross-entropy error, dE/dy = -t/y + (1-t)/(1-y) - we should consider passing the error function as a parameter
     dE_dY = - dE_func(layer_activities[num_layers - 1], targets)
 
-    for j in range(num_layers-1, down_to, -1):
+    for j in range(down_to, num_layers)[::-1]:
         dY_dZ = layers[j].gradient()  # get dy/dz from the layer's gradient method
         dE_dZ = dY_dZ * dE_dY
 
-        dE_dY = dot(dE_dZ, weights[j-1].transpose())  # This will be dE/dY used in next layer
-        dE_dW = dot(layer_activities[j-1].transpose(), dE_dZ)/data.shape[0]  # Normalised dE/dW matrix for this layer over all training examples
         dE_dB = (dE_dZ.sum(0).reshape((1, layers[j].size)))/data.shape[0]
 
         decay_term = (tau/data.shape[0])*network.weights[j-1]
-        dE_dW += decay_term
 
-        network_dE_dW.insert(0, dE_dW)  # Put this at the front of the list of network deltas
+        if j > 0:
+            dE_dY = dot(dE_dZ, weights[j-1].transpose())  # This will be dE/dY used in next layer
+            dE_dW = dot(layer_activities[j-1].transpose(), dE_dZ)/data.shape[0]  # Normalised dE/dW matrix for this layer over all training examples
+            dE_dW += decay_term
+            network_dE_dW.insert(0, dE_dW)  # Put this at the front of the list of network deltas
+
         network_dE_dB.insert(0, dE_dB)
 
     return network_dE_dW, network_dE_dB
@@ -49,13 +51,19 @@ def train(net, X, T, learning_rate=0.1, tau=0, dE_func=dE_cross_entropy):
     '''Perform one iteration of backpropagation training on net using inputs X and targets T and a learning_rate'''
     weight_derivatives, bias_derivatives = backprop(net, X, T, tau, skip_layers=0, dE_func=dE_func)
 
-    for i in range(len(net.weights)):
-        assert net.weights[i].shape == weight_derivatives[i].shape, "Something went wrong here. W and dW are mismatched"
-        assert net.layers[i+1].bias.shape == bias_derivatives[i].shape, "Something went wrong here. B and dB are mismatched"
+    for i in range(len(net.layers)):
+        if i < len(net.weights):
+            assert net.weights[i].shape == weight_derivatives[i].shape, "Something went wrong here. W and dW are mismatched"
+            net.weights[i] -= learning_rate * weight_derivatives[i]
+        assert net.layers[i].bias.shape == bias_derivatives[i].shape, "Something went wrong here. B and dB are mismatched"
+        net.layers[i].bias -= learning_rate * bias_derivatives[i]
 
-        net.weights[i] -= learning_rate * weight_derivatives[i]
-        net.layers[i+1].bias -= learning_rate * bias_derivatives[i]
-
+def train_momentum(net, X, T, learning_rate=0.1, tau=0, dE_func=dE_cross_entropy, currspeed=0, multiplier=0.9):
+    '''Same as regular gradient descent but uses gradient to change speed of gradient descent. '''
+    grad = concatenate(tuple(map(recursive_flatten,backprop(net, X, T, tau, skip_layers=0, dE_func=dE_func))))
+    currspeed = (currspeed * multiplier) - grad
+    net.set_parameters(net.flatten_parameters() + currspeed * learning_rate)
+    return currspeed
 def testNet():
     '''Small multi-layer test net for gradient checking, presumably if this works then any sized net works'''
     net = NeuralNet([LinearLayer(4), LogisticLayer(5), LogisticLayer(3)])

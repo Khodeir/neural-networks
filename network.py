@@ -65,36 +65,29 @@ class NeuralNet(object):
 
     def flatten_parameters(self):
         '''Returns all the network parameters in one vector, weights first, then biases.'''
-        parameters = []
-        for matrix in self.weights:
-            parameters = concatenate((parameters, matrix.flatten()),1)
-        for layer in self.layers[1:]:
-            parameters = concatenate((parameters, layer.bias.flatten()),1)
 
-        return parameters
+        return concatenate((recursive_flatten(self.weights), recursive_flatten([l.bias for l in self.layers])))
 
     def set_parameters(self, parameters):
         '''Takes flattened network parameters and sets the network's parameters to those.'''
         layer_sizes = [layer.size for layer in self.layers]
-        net_size = 0
-        for i in range(0, len(layer_sizes)-1):
-            net_size += layer_sizes[i]*layer_sizes[i+1]
-            net_size += layer_sizes[i+1]
+        weight_shapes = []
+        weight_sizes = []
+        for i in range(len(layer_sizes)-1):
+            weight_sizes.append(layer_sizes[i]*layer_sizes[i+1])
+            weight_shapes.append((layer_sizes[i],layer_sizes[i+1]))
 
-        assert len(parameters) == net_size, "The parameters don't match the dimensions of the net"
-        weights = []
+        assert len(parameters) == sum(layer_sizes + weight_sizes) , "The parameters don't match the dimensions of the net"
+
         count = 0
-        for i in range(0, len(layer_sizes)-1):
-            weight = parameters[count: (count + layer_sizes[i]*layer_sizes[i+1])]
-            matrix = weight.reshape((layer_sizes[i],layer_sizes[i+1]))
-            weights.append(matrix)
-            count += (layer_sizes[i]*layer_sizes[i+1])
-
-        for i in range(1,len(layer_sizes)): #Set biases of all the layers, excluding bottom layer
+        weights = []
+        for i in range(len(layer_sizes)-1):
+            weights.append(parameters[count:count+weight_sizes[i]].reshape(weight_shapes[i]))
+            count += weight_sizes[i]
+        self.weights = weights
+        for i in range(len(layer_sizes)): 
             self.layers[i].bias = (parameters[count:count+layer_sizes[i]])
             count += layer_sizes[i]
-
-        self.weights = weights
 
     def save_network(self, filename):
         '''Save the network's parameters in a .mat file.'''
@@ -180,3 +173,8 @@ def data_map(data, (featN, featM), (mapN, mapM)):
             row += featN
             col = 0
     return result
+
+def recursive_flatten(mats):
+    if len(mats) == 1:
+        return mats[0].flatten()
+    return concatenate((mats[0].flatten(), recursive_flatten(mats[1:])))
