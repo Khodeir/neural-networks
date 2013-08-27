@@ -26,7 +26,6 @@ def backprop(network, data, targets, tau=0, skip_layers=0, dE_func=dE_cross_entr
     down_to = num_layers - (num_layers - skip_layers)
 
     # dE/dy for output layer
-    # Using cross-entropy error, dE/dy = -t/y + (1-t)/(1-y) - we should consider passing the error function as a parameter
     dE_dY = - dE_func(layer_activities[num_layers - 1], targets)
 
     for j in range(down_to, num_layers)[::-1]:

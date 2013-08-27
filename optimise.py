@@ -8,7 +8,7 @@ def err(x, network, data, targets, error_func=error, dE_func=dE_cross_entropy):
 
     network.set_parameters(x)
 
-    return error_func(network, data, targets, decay_rate=0)
+    return error_func(network, data, targets, tau=0)
 
 def squared_err(x, network, data, targets):
 

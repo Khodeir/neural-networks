@@ -94,9 +94,10 @@ class NeuralNet(object):
         data = {}
         data['numlayers'] = self.numlayers
 
-        for i in range(1, self.numlayers):
-            data['weights_' + str(i-1)] = self.weights[i-1]
+        for i in range(self.numlayers - 1):
+            data['weights_' + str(i)] = self.weights[i]
             data['bias_' + str(i)] = self.layers[i].bias
+        data['bias_-1'] = self.layers[-1].bias
 
         savemat(filename, data)
 
@@ -104,9 +105,10 @@ class NeuralNet(object):
         '''Load network parameters from a .mat file and set it to the parameters of this network.'''
         data = loadmat(filename)
         weights, biases = [],[]
-        for i in range(1, self.numlayers):
-            self.weights[i-1] = data.get('weights_' + str(i-1))
+        for i in range(self.numlayers - 1):
+            self.weights[i] = data.get('weights_' + str(i))
             self.layers[i].bias = data.get('bias_' + str(i))
+        self.layers[-1].bias = data.get('bias_-1')
 
     def weight_histogram(self, index=None):
         '''Plot a weight histogram for this net. Optional parameter index to specify a particular weight matrix.'''
