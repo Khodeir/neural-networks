@@ -9,8 +9,8 @@ class Layer(object):
         self.dropoutrate = dropoutrate
 
     @classmethod
-    def from_layer(cls, layer):
-        return cls(layer.size, layer.bias.copy(), layer.activities.copy())
+    def from_layer(cls, layer, bias=None, activities=None):
+        return cls(layer.size, bias is not None and bias or layer.bias.copy(), activities is not None and activities or layer.activities.copy())
 
     def switch_type(self, newlayertype):
         '''Switch the layer to the given newlayertype'''
@@ -128,4 +128,5 @@ def dropout(data, rate=0.2):
         return data
     drop = data.copy()
     drop[random.binomial(1, rate, data.shape)] = 0
+    #drop[1==random.binomial(1, rate, data.shape)] = 0 - from my copy seems i thought this was a better idea
     return drop
