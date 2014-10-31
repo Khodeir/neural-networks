@@ -1,6 +1,7 @@
 from numpy import *
 from layer import *
 
+
 class NeuralNet(object):
     '''A general neural network class.'''
     def __init__(self, layers):
@@ -12,13 +13,11 @@ class NeuralNet(object):
 
     def forward_pass(self, data):
         last = len(self.weights)
-        activities = []
         for i in range(self.numlayers):
             data = self.layers[i].process(data)
-            activities.append(data)
             if i < last:
                 data = dot(data, self.weights[i])
-        return activities
+        return [layer.activities for layer in self.layers]
 
     def get_layers(self):
         return self.layers

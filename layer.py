@@ -6,7 +6,6 @@ class Layer(object):
         self.size = size
         self.bias = zeros((1, size))
         self.activities = zeros((1, size))
-        self.grad = zeros((1,size))
     def process(self, weighted_input):
         assert False, "This is an abstract class"
     def gradient(self):
@@ -23,8 +22,7 @@ class LogisticLayer(Layer):
         return self.activities
     def gradient(self):
         #In logistic units, dy/dz = y*(1-y)
-        self.grad = self.activities * (1- self.activities)
-        return self.grad
+        return self.activities * (1- self.activities)
 
 #I still need to add gradient methods for all the other kinds of units
 class LinearLayer(Layer):
@@ -38,7 +36,14 @@ class BinaryThresholdLayer(Layer):
         return self.activities
 
 class SoftMax(Layer):
+    def normalizer(self, a):
+        max_small = a.max(axis=1)
+        max_big = repmat(max_small, self.size, 1).transpose()
+        return log(exp(a - max_big).sum(1)) + max_small
     def process(self, weighted_input):
-        Z = weighted_input + self.repbias(weighted_input)
-        reg = transpose(repmat(exp(Z).sum(1), self.size, 1))
-        return exp(Z)/reg
+        normalizer = self.normalizer(weighted_input).reshape((1, weighted_input.shape[0]))
+        log_prob = weighted_input - repmat(normalizer, self.size, 1).transpose()
+        self.activities = exp(log_prob)
+        return self.activities
+    def gradient(self):
+        return self.activities * (1- self.activities)
