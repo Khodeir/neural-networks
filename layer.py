@@ -101,7 +101,7 @@ class HybridLayer(SoftMax, BinaryStochasticLayer):
         SoftMax.process(self, weighted_input[:,0:self.sizeA])
         self.activitiesA = (self.activities - self.activities.max(1).reshape((weighted_input.shape[0], 1)) == 0).astype(int)
         self.probs = 1/(1 + exp(-(weighted_input[:,self.sizeA:] + self.repbias(weighted_input[:,self.sizeA:], self.sizeA))))
-        self.probs = concatenate((self.activities, self.probs), axis=1)
+        self.probs = concatenate((self.activitiesA, self.probs), axis=1)
         self.activities = concatenate((self.activitiesA, sample_binary_stochastic(self.probs[:,self.sizeA:])), axis=1)
 
     def repbias(self, data, startIndex=0):
