@@ -17,7 +17,9 @@ def backprop(network, data, targets):
     layer_activities = network.forward_pass(data)  # List of matrices of unit activities. Contains l-matrices, where l= numLayers. Order is bottom-up.
     # Every matrix is m x n, where m= numTrainingExamples, n= num units in that layer
 
-    dE_dY = layer_activities[num_layers - 1] - targets  # dE/dy for output layer
+    # dE/dy for output layer
+    # Using cross-entropy error, dE/dy = -t/y + (1-t)/(1-y) - we should consider passing the error function as a parameter
+    dE_dY = - targets/layer_activities[num_layers - 1] + (1 - targets)/(1 - layer_activities[num_layers - 1])
 
     for j in range(num_layers-1, 0, -1):
         dY_dZ = layers[j].gradient()  # get dy/dz from the layer's gradient method
