@@ -2,6 +2,7 @@ from numpy import *
 from layer import *
 import matplotlib.pyplot as plt
 
+
 class NeuralNet(object):
     '''A general neural network class.'''
     def __init__(self, layers):
@@ -10,7 +11,7 @@ class NeuralNet(object):
         self.numlayers = len(layers)
         self.layers = layers
         self.weights = []
-        for i in range(self.numlayers-1): #Random initialisation using heuristic. Uniform distribution [-e,e].
+        for i in range(self.numlayers-1):  # Random initialisation using heuristic. Uniform distribution [-e,e].
             epsilon = sqrt(6)/sqrt(layer_sizes[i]+layer_sizes[i+1])
             self.weights.append(2*epsilon*random.rand(layer_sizes[i], layer_sizes[i+1]) - epsilon)
 
@@ -27,7 +28,7 @@ class NeuralNet(object):
         '''The backward pass pretends that data is the state of the top (output) layer and propagates it down the net'''
         assert False, "Unimplemented"
         last = len(self.weights)
-        for i in range(last-1,-1,-1):
+        for i in range(last-1, -1, -1):
             data = dot(data, self.weights[i].transpose())
             data = self.layers[i].process(data)
         return [layer.activities for layer in self.layers]
@@ -41,7 +42,7 @@ class NeuralNet(object):
     def set_weights(self, weights):
         '''Be careful using this. It could result in bad bugs, I just need this for gradcheck'''
         self.weights = weights
-        
+
     def feature_map(self, i, (featN, featM), (mapN, mapM)):
         '''Returns a map of the i'th weight matrix in the network. Each unit in the i+1'th layer corresponds to a
         (featN x featM = layer[i].size) map and there are (mapN x mapM = layer[i+1].size) maps.'''
@@ -58,6 +59,7 @@ class NeuralNet(object):
                 row += featN
                 col = 0
         return result
+
 
 def draw(data):
     plt.imshow(data, cmap=plt.get_cmap('gray'))

@@ -1,5 +1,5 @@
 from layer import LogisticLayer
-from network import NeuralNet
+from network import NeuralNet, sample_binary_stochastic
 from numpy import *
 
 
@@ -85,7 +85,3 @@ class RBM(NeuralNet):
             self.layers[1].bias += delta_bias_hid
 
             print 'Reconstruction Error:', recons_error
-
-
-def sample_binary_stochastic(probmat):
-    return (probmat > random.random(probmat.shape)).astype(int)
