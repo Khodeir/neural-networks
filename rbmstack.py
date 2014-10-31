@@ -17,7 +17,8 @@ class RBMStack(object):
     def train(self, macindex, K=1, epochs=100, learning_rate=0.1, weightcost=0.1, dropoutrate=0, data=None):
         data = data if data is not None else self.data_for(macindex)[1]
         for epoch in range(epochs):
-            self.rbms[macindex].train(data, K, learning_rate, weightcost, dropoutrate)
+            recons = self.rbms[macindex].train(data, K, learning_rate, weightcost, dropoutrate)
+        return recons
 
     def top_down(self, case):
         for mac in self.rbms[::-1]:

@@ -38,7 +38,7 @@ class RBM(NeuralNet):
         visact = None
         for k in range(K):
             visact = self.sample_vis(dropout(hidact, dropoutrate))
-            hidact = self.sample_hid(dropout(visact, dropoutrate), prob=True)
+            hidact = self.sample_hid(dropout(visact, dropoutrate))
         return visact, hidact
 
     def gibbs_given_v(self, data, K, dropoutrate=0):
@@ -49,6 +49,11 @@ class RBM(NeuralNet):
             hidact = self.sample_hid(dropout(visact, dropoutrate))
             visact = self.sample_vis(dropout(hidact, dropoutrate))
         return visact, hidact
+
+    def reconstruction_error(self, data, K=1):
+        self.gibbs_given_v(data, K)
+        visprobs = self.get_vislayer().probs
+        return square(data - visprobs).sum()
 
     def train(self, data, K, learning_rate=0.1, weightcost=0.0001, dropoutrate=0):
         '''Train the network using normalized data and CD-K for epochs epochs'''

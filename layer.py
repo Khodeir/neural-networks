@@ -77,18 +77,36 @@ class BinaryThresholdLayer(Layer):
 class SoftMax(Layer):
     def normalizer(self, a):
         max_small = a.max(axis=1)
-        max_big = repmat(max_small, self.size, 1).transpose()
+        max_big = repmat(max_small, a.shape[1], 1).transpose()
         return log(exp(a - max_big).sum(1)) + max_small
 
     def process(self, weighted_input):
         normalizer = self.normalizer(weighted_input).reshape((1, weighted_input.shape[0]))
-        log_prob = weighted_input - repmat(normalizer, self.size, 1).transpose()
+        log_prob = weighted_input - repmat(normalizer, weighted_input.shape[1], 1).transpose()
         self.activities = exp(log_prob)
         return self.activities
 
     def gradient(self):
         return self.activities * (1 - self.activities)
 
+class HybridLayer(SoftMax, BinaryStochasticLayer):
+    '''Assumes segmentA is softmax and segmentB is BinaryStochastic'''
+    def __init__(self, sizeA, sizeB):
+        self.sizeA = sizeA
+        Layer.__init__(self, sizeA + sizeB)
+        self.probs = self.activities.copy()
+        self.activitiesA = zeros((1, sizeA))
+
+    def process(self, weighted_input):
+        SoftMax.process(self, weighted_input[:,0:self.sizeA])
+        self.activitiesA = (self.activities - self.activities.max(1).reshape((weighted_input.shape[0], 1)) == 0).astype(int)
+        self.probs = 1/(1 + exp(-(weighted_input[:,self.sizeA:] + self.repbias(weighted_input[:,self.sizeA:], self.sizeA))))
+        self.probs = concatenate((self.activities, self.probs), axis=1)
+        self.activities = concatenate((self.activitiesA, sample_binary_stochastic(self.probs[:,self.sizeA:])), axis=1)
+
+    def repbias(self, data, startIndex=0):
+        '''Replicates the bias vector in so that it can be used in matrix operations with data'''
+        return repmat(self.bias[:,startIndex:   ], data.shape[0], 1)
 
 def sample_binary_stochastic(probmat):
     return (probmat > random.random(probmat.shape)).astype(int)
