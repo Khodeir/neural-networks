@@ -28,9 +28,14 @@ class BN(object):
         return cls(layers, up_weights, down_weights)
 
     def bottom_up(self, data):
+        '''Expects data to be probabilities'''
+        self.upnet.layers[0].probs = data
+        self.upnet.layers[0].activities = sample_binary_stochastic(data)
         return self.upnet.forward_pass(data, 1)
 
     def top_down(self, data):
+        '''Expects data to be binary'''
+        self.downnet.layers[0].activities = data
         return self.downnet.forward_pass(data, 1)
 
 
@@ -53,7 +58,7 @@ class BN(object):
 
         wake_deltas = []
         #Iterate over each layer excluding bottom layer
-        for i in range(self.upnet.numlayers -1):
+        for i in range(self.upnet.numlayers - 1):
             upper_state = hid_states[i+1]
             lower_state = hid_states[i]
             lower_activity = hid_probs[i]
@@ -132,18 +137,15 @@ class DBN(object):
         '''Combines wake, CD, and sleep phases'''
 
         downnet_deltas, top_state = self.bottom_layers.wake_phase(data)
-        top_prob = self.bottom_layers.upnet.layers[-1].probs
 
         #Use samples of the top of the net as the input data of the top level RBM
         #Train top level RBM using CD-k, this will adjust the weight matrix of top RBM alone
         if rbm_data_func is not None:
             top_state = rbm_data_func(top_state)
-            top_prob = rbm_data_func(top_prob)
-        self.top_layer_rbm.train(top_prob, K, learning_rate, weightcost=0.1, dropoutrate=0)
+        self.top_layer_rbm.train(top_state, K, learning_rate, weightcost=0.1, dropoutrate=0)
 
         #Get a vis state from RBM after CD-k, use this as data for top-down pass
-        top_state = self.top_layer_rbm.get_vislayer().activities
-
+        top_state = self.top_layer_rbm.sample_vis(self.top_layer_rbm.sample_hid(top_state))
         if bn_data_func is not None:
             top_state = bn_data_func(top_state)
         upnet_deltas = self.bottom_layers.sleep_phase(top_state)
