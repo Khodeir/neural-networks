@@ -49,9 +49,12 @@ class TanhLayer(Layer):
         return (1 - (self.activities*self.activities))
 
 class BinaryStochasticLayer(LogisticLayer):
+    def __init__(self, size, bias=None, activities=None):
+        LogisticLayer.__init__(self, size, bias, activities)
+        self.probs = self.activities.copy()
     def process(self, weighted_input):
-        probs = LogisticLayer.process(self, weighted_input)
-        self.activities = sample_binary_stochastic(probs)
+        self.probs = LogisticLayer.process(self, weighted_input)
+        self.activities = sample_binary_stochastic(self.probs)
         return self.activities
 
 
