@@ -56,12 +56,12 @@ def train(net, X, T, learning_rate=0.1, tau=0, dE_func=dE_cross_entropy):
             net.weights[i] -= learning_rate * weight_derivatives[i]
         assert net.layers[i].bias.shape == bias_derivatives[i].shape, "Something went wrong here. B and dB are mismatched"
         net.layers[i].bias -= learning_rate * bias_derivatives[i]
-
 def train_momentum(net, X, T, learning_rate=0.1, tau=0, dE_func=dE_cross_entropy, currspeed=0, multiplier=0.9):
     '''Same as regular gradient descent but uses gradient to change speed of gradient descent. '''
+    net.set_parameters(net.flatten_parameters() + (currspeed * learning_rate))
     grad = concatenate(tuple(map(recursive_flatten,backprop(net, X, T, tau, skip_layers=0, dE_func=dE_func))))
     currspeed = (currspeed * multiplier) - grad
-    net.set_parameters(net.flatten_parameters() + currspeed * learning_rate)
+    
     return currspeed
 def testNet():
     '''Small multi-layer test net for gradient checking, presumably if this works then any sized net works'''

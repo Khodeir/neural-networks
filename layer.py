@@ -126,5 +126,6 @@ def sample_binary_stochastic(probmat):
 def dropout(data, rate=0.2):
     if rate == 0:
         return data
-    drop = random.binomial(1, rate, data.shape)
-    return data - data * drop
+    drop = data.copy()
+    drop[random.binomial(1, rate, data.shape)] = 0
+    return drop

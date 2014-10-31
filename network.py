@@ -86,7 +86,7 @@ class NeuralNet(object):
             count += weight_sizes[i]
         self.weights = weights
         for i in range(len(layer_sizes)): 
-            self.layers[i].bias = (parameters[count:count+layer_sizes[i]])
+            self.layers[i].bias = parameters[count:count+layer_sizes[i]].reshape((1, layer_sizes[i]))
             count += layer_sizes[i]
 
     def save_network(self, filename):
@@ -94,8 +94,9 @@ class NeuralNet(object):
         data = {}
         data['numlayers'] = self.numlayers
 
-        for i in range(self.numlayers - 1):
-            data['weights_' + str(i)] = self.weights[i]
+        for i in range(self.numlayers):
+            if i > 0:
+                data['weights_' + str(i-1)] = self.weights[i-1]
             data['bias_' + str(i)] = self.layers[i].bias
         data['bias_-1'] = self.layers[-1].bias
 
@@ -105,8 +106,9 @@ class NeuralNet(object):
         '''Load network parameters from a .mat file and set it to the parameters of this network.'''
         data = loadmat(filename)
         weights, biases = [],[]
-        for i in range(self.numlayers - 1):
-            self.weights[i] = data.get('weights_' + str(i))
+        for i in range(self.numlayers):
+            if i > 0:
+                self.weights[i-1] = data.get('weights_' + str(i-1))
             self.layers[i].bias = data.get('bias_' + str(i))
         self.layers[-1].bias = data.get('bias_-1')
 
