@@ -57,7 +57,6 @@ class BinaryStochasticLayer(LogisticLayer):
         self.activities = sample_binary_stochastic(self.probs)
         return self.activities
 
-
 class LinearLayer(Layer):
     def process(self, weighted_input):
         self.activities = weighted_input + self.repbias(weighted_input)
