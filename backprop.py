@@ -1,6 +1,6 @@
 from numpy import *
 from network import *
-
+from metrics import *
 
 def backprop(network, data, targets, skip_layers=0):
     '''data is a matrix of nxv training data. targets has all the target values of the data.
@@ -48,45 +48,6 @@ def train(net, X, T, learning_rate=0.1, decay_rate=0):
 
         net.weights[i] -= learning_rate * (weight_derivatives[i] + reg_term)
         net.layers[i+1].bias -= learning_rate * bias_derivatives[i]
-
-
-def gradcheck(network, layer, data, targets):
-    '''Same idea as backprop, just to confirm the gradients'''
-    dE_dW = []
-    epsilon = 0.0001
-
-    weights = network.get_weights()
-    temp_weights = weights[:]  # Make a copy and work with that so nothing weird happens
-    wmatrix = temp_weights[layer]  # Look at derivatives for this layer in particular
-
-    for i in range(shape(wmatrix)[0]):
-        for j in range(shape(wmatrix)[1]):
-            wmatrix[i][j] += epsilon  # w + epsilon
-            temp_weights[layer] = wmatrix
-            network.set_weights(temp_weights)  # make these the weights for the network
-            error1 = error(network, data, targets)
-
-            wmatrix[i][j] -= 2*epsilon  # w - epsilon
-            temp_weights[layer] = wmatrix
-            network.set_weights(temp_weights)
-            error2 = error(network, data, targets)
-
-            grad = ((error1 - error2)/(2*epsilon))/data.shape[0]
-            dE_dW.append(grad)
-
-            wmatrix[i][j] += epsilon
-            temp_weights[layer] = wmatrix
-            network.set_weights(temp_weights)
-
-    network.set_weights(weights)  # Back to original weights
-    return dE_dW
-
-
-def error(net, data, T):
-    '''Cross-entropy error. Need this for gradcheck'''
-    Y = net.forward_pass(data)[-1]
-    error = -(T*log(Y) + (1-T)*log(1-Y)).sum()  # Unregularised error term
-    return error
 
 
 def testNet():
