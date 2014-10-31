@@ -39,7 +39,7 @@ class BN(object):
         It unties the recognition weights from the generative ones.'''
         numweights = self.numlayers - 1
         for i in range(numweights):
-            self.downnet.weights[i] = self.upnet.weights[i].copy()
+            self.downnet.weights[i] = self.downnet.weights[i].copy()
 
     def wake_phase(self, data):
         '''The first step of wake-sleep and contrastive wake-sleep. Returns wake_deltas, a list of matrices by which the
@@ -60,7 +60,8 @@ class BN(object):
             lower_activity = hid_probs[i]
 
             delta = dot(upper_state.transpose(), (lower_state - lower_activity))
-            wake_deltas.append(delta)
+
+            wake_deltas.insert(0,delta)
 
         return wake_deltas, hid_states[-1]
 
@@ -77,13 +78,14 @@ class BN(object):
 
         sleep_deltas = []
 
-        for i in range(downnet.numlayers -1) #Iterate over each layer excluding top layer
+        #Iterate over each layer excluding top layer
+        for i in range(self.downnet.numlayers -1):
             lower_state = hid_states[i+1]
             upper_state = hid_states[i]
             upper_activity = hid_probs[i]
 
             delta = dot(lower_state.transpose(), (upper_state - upper_activity))
-            sleep_deltas.append(delta)
+            sleep_deltas.insert(0,delta)
 
         return sleep_deltas
 
@@ -94,9 +96,9 @@ class BN(object):
         upnet_deltas = self.sleep_phase(top_state) #The top state is the input for the top-down pass
 
         for i in range(len(downnet_deltas)):
-            downnet.weights[i] += learning_rate*downnet_deltas[i]
+            self.downnet.weights[i] += learning_rate*downnet_deltas[i]
         for i in range(len(upnet_deltas)):
-            upnet.weights[i] += learning_rate*downnet_deltas[i]
+            self.upnet.weights[i] += learning_rate*upnet_deltas[i]
 
 class DBN(object):
     def __init__(self, bottom_layers, top_layer_rbm):
@@ -142,6 +144,6 @@ class DBN(object):
         upnet_deltas = self.sleep_phase(top_state)
 
         for i in range(len(downnet_deltas)):
-            downnet.weights[i] += learning_rate*downnet_deltas[i]
+            self.bottom_layers.downnet.weights[i] += learning_rate*downnet_deltas[i]
         for i in range(len(upnet_deltas)):
-            upnet.weights[i] += learning_rate*downnet_deltas[i]
+            self.bottom_layers.upnet.weights[i] += learning_rate*upnet_deltas[i]
