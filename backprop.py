@@ -6,9 +6,9 @@ def dE_cross_entropy(Y, T):
     return T/Y - (1-T)/(1-Y)
 
 def dE_squared_error(Y, T):
-    return -2*(T-Y)
+    return 2*(T-Y)
 
-def backprop(network, data, targets, skip_layers=0, tau=0, dE_func=dE_cross_entropy):
+def backprop(network, data, targets, tau=0, skip_layers=0, dE_func=dE_cross_entropy):
     '''data is a matrix of nxv training data. targets has all the target values of the data.
     Backprop returns a list of matrices, network_dE_dW.
     The list contains l-matrices, where l is the number of layers in the network.
@@ -37,7 +37,7 @@ def backprop(network, data, targets, skip_layers=0, tau=0, dE_func=dE_cross_entr
         dE_dW = dot(layer_activities[j-1].transpose(), dE_dZ)/data.shape[0]  # Normalised dE/dW matrix for this layer over all training examples
         dE_dB = (dE_dZ.sum(0).reshape((1, layers[j].size)))/data.shape[0]
 
-        decay_term = (tau/data.shape[0])*net.weights[i]
+        decay_term = (tau/data.shape[0])*network.weights[j-1]
         dE_dW += decay_term
 
         network_dE_dW.insert(0, dE_dW)  # Put this at the front of the list of network deltas
@@ -47,7 +47,7 @@ def backprop(network, data, targets, skip_layers=0, tau=0, dE_func=dE_cross_entr
 
 def train(net, X, T, learning_rate=0.1, tau=0, dE_func=dE_cross_entropy):
     '''Perform one iteration of backpropagation training on net using inputs X and targets T and a learning_rate'''
-    weight_derivatives, bias_derivatives = backprop(net, X, T, dE_func=dE_cross_entropy, tau)
+    weight_derivatives, bias_derivatives = backprop(net, X, T, tau, skip_layers=0, dE_func=dE_func)
 
     for i in range(len(net.weights)):
         assert net.weights[i].shape == weight_derivatives[i].shape, "Something went wrong here. W and dW are mismatched"

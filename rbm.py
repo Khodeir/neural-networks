@@ -1,5 +1,5 @@
 from layer import *
-from network import NeuralNet
+from network import NeuralNet #, sample_binary_stochastic
 from numpy import *
 
 

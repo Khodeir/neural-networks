@@ -60,6 +60,17 @@ class BinaryStochasticLayer(LogisticLayer):
         #Use probs instead of activities, dy/dz = y*(1-y). So that backprop works with BinaryStochastic
         return self.probs * (1 - self.probs)
 
+class BinaryStochasticTanhLayer(TanhLayer):
+    def __init__(self, size, bias=None, activities=None):
+        TanhLayer.__init__(self, size, bias, activities)
+        self.probs = self.activities.copy()
+    def act(self, weighted_input):
+        self.probs = TanhLayer.act(self, weighted_input)
+        return sample_binary_stochastic(self.probs)
+    def gradient(self):
+        #Use probs instead of activities, dy/dz = 1-y^2. So that backprop works with BinaryStochastic
+        return (1 - (self.probs*self.probs))
+
 class LinearLayer(Layer):
     def act(self, weighted_input):
         return weighted_input + self.repbias(weighted_input)

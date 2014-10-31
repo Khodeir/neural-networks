@@ -1,7 +1,7 @@
 from network import *
 from layer import *
 from metrics import error
-from backprop import backprop, train
+from backprop import backprop, train, dE_squared_error
 from optimise import *
 from copy import deepcopy
 ###############################
@@ -91,7 +91,7 @@ class AutoEncoder(object):
 
         fine_net = NeuralNet(fine_layers, fine_weights)
 
-        err = train_ae(fine_net, training_inputs, epochs=5, learning_rate=0.1, noise=0, decay_rate=0)
+        err = train_ae(fine_net, training_inputs, epochs=20, learning_rate=0.03, noise=0)
         encode_weights, decode_weights = [],[]
         for i in range(0,(len(fine_net.weights)/2)):
             encode_weights.append(fine_net.weights[i])
@@ -104,37 +104,35 @@ class AutoEncoder(object):
     def insert_layer(self, index, layer):
         '''Adds an intermediate encoding/decoding layer to the autoencoder at the given index'''
 
-def train_ae(ae, training_inputs, epochs=20, learning_rate=0.2, batch_size=100, noise=0.15, decay_rate=0, get_error=False):
+def train_ae(ae, training_inputs, epochs=100, learning_rate=0.2, batch_size=100, noise=0.4, tau=0, get_error=False):
     '''Trains an autoencoder on data.'''
-    corrupt_training_inputs = dropout(training_inputs, noise) #Add noise to input if you want
-    input_batches = [training_inputs[i:i+batch_size] for i in range(0, training_inputs.shape[0], batch_size)] #Split to mini-batches
-    corrupt_input_batches = [corrupt_training_inputs[i:i+batch_size] for i in range(0, training_inputs.shape[0], batch_size)]
     errors = []
 
     for epoch in range(epochs):
+        corrupt_training_inputs = dropout(training_inputs, noise) #Add noise to input if you want
+        input_batches = [training_inputs[i:i+batch_size] for i in range(0, training_inputs.shape[0], batch_size)] #Split to mini-batches
+        corrupt_input_batches = [corrupt_training_inputs[i:i+batch_size] for i in range(0, training_inputs.shape[0], batch_size)]
         print 'Epoch Number: ', epoch
         for i in range(len(input_batches)):
-            train(ae, corrupt_input_batches[i], input_batches[i], learning_rate, decay_rate)
+            train(ae, corrupt_input_batches[i], input_batches[i], learning_rate, tau)
             if i%100 == 0 and get_error:
-                e = error(ae, input_batches[i], input_batches[i], decay_rate)
+                e = error(ae, input_batches[i], input_batches[i], tau)
                 print e
                 errors.append(e)
     if get_error:
         return errors
 
-def train_cg(ae, training_inputs, epochs=1, batch_size=1000, noise=0.25, maxiter=10):
+def train_cg(ae, training_inputs, epochs=1, batch_size=1000, noise=0.25, maxiter=50):
     '''Trains an autoencoder on data using Conjugate Gradient'''
-    corrupt_training_inputs = dropout(training_inputs, noise) #Add noise to input if you want
-    input_batches = [training_inputs[i:i+batch_size] for i in range(0, training_inputs.shape[0], batch_size)] #Split to mini-batches
-    corrupt_input_batches = [corrupt_training_inputs[i:i+batch_size] for i in range(0, training_inputs.shape[0], batch_size)]
 
     for epoch in range(epochs):
+        corrupt_training_inputs = dropout(training_inputs, noise) #Add noise to input if you want
+        input_batches = [training_inputs[i:i+batch_size] for i in range(0, training_inputs.shape[0], batch_size)] #Split to mini-batches
+        corrupt_input_batches = [corrupt_training_inputs[i:i+batch_size] for i in range(0, training_inputs.shape[0], batch_size)]
         print 'Epoch Number: ', epoch
-        guess = ae.flatten_parameters()
         for i in range(len(input_batches)):
             print 'Iteration Number: ', i
-            result = CG(ae, guess, corrupt_input_batches[i], input_batches[i], maxiter=maxiter) #Investigate the maxiter value
-            guess = result.x
+            result = CG(ae, corrupt_input_batches[i], input_batches[i], maxiter=maxiter) #Investigate the maxiter value
 
-    return guess
+    return result.x
 
