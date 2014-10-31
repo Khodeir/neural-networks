@@ -41,9 +41,9 @@ def backprop(network, data, targets, skip_layers=0, dE_func=dE_cross_entropy):
         network_dE_dB.insert(0, dE_dB)
     return network_dE_dW, network_dE_dB
 
-def flat_grad(network, data, targets):
+def flat_grad(network, data, targets, dE_func=dE_cross_entropy):
     '''Return gradients as a single row vector, to be passed to optimisation algorithms. Ascending order of layer de/dWs, then layer dE/dBs'''
-    a,b = backprop(network, data, targets)
+    a,b = backprop(network, data, targets, dE_func)
     flat_grad = []
 
     for matrix in a:

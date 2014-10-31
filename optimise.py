@@ -1,40 +1,38 @@
 from metrics import error
-from backprop import flat_grad
+from backprop import flat_grad, dE_cross_entropy
 from layer import *
 from network import *
 from scipy.optimize import minimize
 
-def cross_err(x, network, data, targets):
+def err(x, network, data, targets, error_func=error, dE_func=dE_cross_entropy):
 
 	network.set_parameters(x)
 
-	return error(network, data, targets, decay_rate=0)
+	return error_func(network, data, targets, decay_rate=0)
 
-def squared_err(x, network, data, targets):
-
-	network.set_parameters(x)
-
-	return square(network.forward_pass(data)[-1] - targets).sum()
-
-def deriv(x, network, data, targets):
+def deriv(x, network, data, targets, error_func=error, dE_func=dE_cross_entropy):
 	'''Network error derivatives using backprop. x is a single vector with all of a network's parameters.'''
 
 	network.set_parameters(x)
 
-	return flat_grad(network, data, targets)
+	return flat_grad(network, data, targets, dE_func)
 
-def BFGS(network, initial, data, targets, maxiter=1000):
-	weights = minimize(cross_err, initial, [(network), (data), (targets)], method='BFGS', jac = deriv, options={'disp':True, 'maxiter':maxiter})
+def BFGS(network, data, targets, maxiter=1000, error_func=error, dE_func=dE_cross_entropy):
+	initial = network.flatten_parameters()
+	weights = minimize(err, initial, [(network),(data),(targets),(error_func),(dE_func)], method='BFGS', jac = deriv, options={'disp':True, 'maxiter':maxiter})
 	return weights
 
-def L_BFGS(network, initial, data, targets, maxiter=1000, bounds=None):
-	weights = minimize(cross_err, initial, [(network), (data), (targets)], method='L-BFGS-B', jac = deriv, bounds=bounds, options={'disp':True, 'maxiter':maxiter})
+def L_BFGS(network, data, targets, maxiter=1000, error_func=error, dE_func=dE_cross_entropy, bounds=None):
+	initial = network.flatten_parameters()
+	weights = minimize(err, initial, [(network),(data),(targets),(error_func),(dE_func)], method='L-BFGS-B', jac = deriv, bounds=bounds, options={'disp':True, 'maxiter':maxiter})
 	return weights
 
-def CG(network, initial, data, targets, maxiter=1000):
-	weights = minimize(cross_err, initial, [(network), (data), (targets)], method='CG', jac = deriv, options={'disp':True, 'maxiter':maxiter})
+def CG(network, data, targets, maxiter=1000, error_func=error, dE_func=dE_cross_entropy):
+	initial = network.flatten_parameters()
+	weights = minimize(err, initial, [(network),(data),(targets),(error_func),(dE_func)], method='CG', jac = deriv, options={'disp':True, 'maxiter':maxiter})
 	return weights
 
-def Newton_CG(network, initial, data, targets, maxiter=1000):
-	weights = minimize(cross_err, initial, [(network), (data), (targets)], method='Newton-CG', jac = deriv, options={'disp':True, 'maxiter':maxiter})
+def Newton_CG(network, data, targets, maxiter=1000, error_func=error, dE_func=dE_cross_entropy):
+	initial = network.flatten_parameters()
+	weights = minimize(err, initial, [(network),(data),(targets),(error_func),(dE_func)], method='Newton-CG', jac = deriv, options={'disp':True, 'maxiter':maxiter})
 	return weights

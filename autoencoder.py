@@ -104,7 +104,7 @@ class AutoEncoder(object):
     def insert_layer(self, index, layer):
         '''Adds an intermediate encoding/decoding layer to the autoencoder at the given index'''
 
-def train_ae(ae, training_inputs, epochs=5, learning_rate=0.2, batch_size=100, noise=0.3, decay_rate=0, get_error=False):
+def train_ae(ae, training_inputs, epochs=20, learning_rate=0.2, batch_size=100, noise=0.15, decay_rate=0, get_error=False):
     '''Trains an autoencoder on data.'''
     corrupt_training_inputs = dropout(training_inputs, noise) #Add noise to input if you want
     input_batches = [training_inputs[i:i+batch_size] for i in range(0, training_inputs.shape[0], batch_size)] #Split to mini-batches
