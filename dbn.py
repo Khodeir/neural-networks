@@ -1,4 +1,5 @@
 from network import NeuralNet
+from layer import *
 
 
 class BN(object):
@@ -32,12 +33,70 @@ class BN(object):
     def top_down(self, data):
         return self.downnet.forward_pass(data, 1)
 
+
     def __untie_weights__(self):
         '''This is an ugly step, and is only necessary when the db is initialized from RBMs.
         It unties the recognition weights from the generative ones.'''
         numweights = self.numlayers - 1
         for i in range(numweights):
             self.downnet.weights[i] = self.upnet.weights[i].copy()
+
+    def wake_phase(self, data):
+        '''The first step of wake-sleep and contrastive wake-sleep. Returns wake_deltas, a list of matrices by which the
+        the weights of the down net should be adjusted. Also returns hidden states of top layer.'''
+        #Get the activities (probabilities) of every layer after doing a bottom-up pass
+        #hid_probs is a list of lists, each one containing the activations for each layer, starting with lowest layer. 
+        hid_probs = self.bottom_up(data)
+        #Get binary states for these layers stochastically.
+        hid_states = []
+        for layer in hid_probs:
+            hid_states.append(sample_binary_stochastic(layer))
+
+        wake_deltas = []
+
+        for i in range(upnet.numlayers -1) #Iterate over each layer excluding bottom layer
+            upper_state = hid_states[i+1]
+            lower_state = hid_states[i]
+            lower_activity = hid_probs[i]
+
+            delta = dot(upper_state.transpose(), (lower_state - lower_activity))
+            wake_deltas.append(delta)
+
+        return wake_deltas, hid_states[-1]
+
+    def sleep_phase(self, data):
+        '''The last step of wake-sleep and contrastive wake-sleep. Returns sleep_deltas, a list of matrices by which the
+        the weights of the up net should be adjusted. '''
+        #Get the activities (probabilities) of every layer after doing a top-down pass
+        #hid_probs is a list of lists, each one containing the activations for each layer, starting with top layer. 
+        hid_probs = self.top_down(data)
+        #Get binary states for these layers stochastically.
+        hid_states = []
+        for layer in hid_probs:
+            hid_states.append(sample_binary_stochastic(layer))
+
+        sleep_deltas = []
+
+        for i in range(downnet.numlayers -1) #Iterate over each layer excluding top layer
+            lower_state = hid_states[i+1]
+            upper_state = hid_states[i]
+            upper_activity = hid_probs[i]
+
+            delta = dot(lower_state.transpose(), (upper_state - upper_activity))
+            sleep_deltas.append(delta)
+
+        return sleep_deltas
+
+    def wake_sleep(self, data, learning_rate):
+        '''Combines wake and sleep phases'''
+
+        downnet_deltas, top_state = self.wake_phase(data)
+        upnet_deltas = self.sleep_phase(top_state) #The top state is the input for the top-down pass
+
+        for i in range(len(downnet_deltas)):
+            downnet.weights[i] += learning_rate*downnet_deltas[i]
+        for i in range(len(upnet_deltas)):
+            upnet.weights[i] += learning_rate*downnet_deltas[i]
 
 class DBN(object):
     def __init__(self, bottom_layers, top_layer_rbm):
@@ -67,3 +126,22 @@ class DBN(object):
         visprobs_top_rbm = self.top_layer_rbm.gibbs_given_h(startingstate, k)[0]
         activities = self.bottom_layers.top_down(visprobs_top_rbm)
         return activities
+
+    def contrastive_wake_sleep(self, data, K=1, learning_rate=0.1):
+        '''Combines wake, CD, and sleep phases'''
+        
+        downnet_deltas, top_state = self.wake_phase(data)
+
+        #Use samples of the top of the net as the input data of the top level RBM
+        #Train top level RBM using CD-k, this will adjust the weight matrix of top RBM alone
+        top_layer_rbm.train(top_state, K, epochs=1, learning_rate, weightcost=0.1, dropoutrate=0))
+
+        top_activities = top_layer_rbm.get_vislayer().activities
+        top_state = sample_binary_stochastic(top_activities)
+        #Get a vis state from RBM after CD-k, use this as data for top-down pass
+        upnet_deltas = self.sleep_phase(top_state)
+
+        for i in range(len(downnet_deltas)):
+            downnet.weights[i] += learning_rate*downnet_deltas[i]
+        for i in range(len(upnet_deltas)):
+            upnet.weights[i] += learning_rate*downnet_deltas[i]
