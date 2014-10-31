@@ -2,7 +2,7 @@ from numpy import *
 from network import *
 
 
-def backprop(network, data, targets):
+def backprop(network, data, targets, decay_rate= 1):
     '''data is a matrix of nxv training data. targets has all the target values of the data.
     Backprop returns a list of matrices, network_dE_dW.
     The list contains l-matrices, where l is the number of layers in the network.
@@ -29,14 +29,17 @@ def backprop(network, data, targets):
         dE_dW = dot(layer_activities[j-1].transpose(), dE_dZ)/data.shape[0]  # Normalised dE/dW matrix for this layer over all training examples
         dE_dB = (dE_dZ.sum(0).reshape((1, layers[j].size)))/data.shape[0]
 
+        reg_term = (decay_rate/data.shape[0])*weights[j-1] #Regularisation term to be added to dE/dW for the given layer
+        dE_dW += reg_term
+        
         network_dE_dW.insert(0, dE_dW)  # Put this at the front of the list of network deltas
         network_dE_dB.insert(0, dE_dB)
     return network_dE_dW, network_dE_dB
 
 
-def train(net, X, T, learning_rate=0.1):
+def train(net, X, T, learning_rate=0.1, decay_rate= 1):
     '''Perform one iteration of backpropagation training on net using inputs X and targets T and a learning_rate'''
-    weight_derivatives, bias_derivatives = backprop(net, X, T)
+    weight_derivatives, bias_derivatives = backprop(net, X, T, decay_rate)
 
     for i in range(len(net.weights)):
         assert net.weights[i].shape == weight_derivatives[i].shape, "Something went wrong here. W and dW are mismatched"
@@ -45,7 +48,7 @@ def train(net, X, T, learning_rate=0.1):
         net.layers[i+1].bias -= learning_rate * bias_derivatives[i]
 
 def gradcheck(network, data, targets):
-    '''Exactly the same idea as backprop, just to confirm the gradients from backprop'''
+    '''Exactly the same idea as backprop, just to confirm the gradients from backprop'''#Still didn't do this
     network_dE_dW, network_dE_dB = [], []
 
     #Some info about what the network's like

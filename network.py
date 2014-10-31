@@ -9,7 +9,10 @@ class NeuralNet(object):
         layer_sizes = [layer.size for layer in layers]
         self.numlayers = len(layers)
         self.layers = layers
-        self.weights = [0.03*random.randn(layer_sizes[i], layer_sizes[i+1]) for i in range(self.numlayers-1)]
+        self.weights = []
+        for i in range(self.numlayers-1): #Random initialisation using heuristic. Uniform distribution [-e,e].
+            epsilon = sqrt(6)/sqrt(layer_sizes[i]+layer_sizes[i+1])
+            self.weights.append(2*epsilon*random.rand(layer_sizes[i], layer_sizes[i+1]) - epsilon)
 
     def forward_pass(self, data):
         last = len(self.weights)
