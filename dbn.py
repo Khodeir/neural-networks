@@ -16,7 +16,6 @@ class BN(object):
         '''Initializes a BN from a list of RBMS. NOTE: the down weights and upweights are tied.
         Modifying one, modifies the other. To untie, call the __untie__ method.'''
         layers = []
-
         # First layer of dbn is the visible layer of the bottom rbm
         layers.append(rbms[0].get_vislayer())
         # Keep all hidden layers
@@ -164,7 +163,7 @@ class DBN(object):
         activities = self.bottom_layers.top_down(visstates)
         return activities
 
-    def contrastive_wake_sleep(self, data, K=1, learning_rate=1, rbm_data_func=None, bn_data_func=None): #Changed default learning rate, now it seems to be more useful
+    def contrastive_wake_sleep(self, data, K=1, learning_rate=1, rbm_data_func=None, bn_data_func=None):
         '''Combines wake, CD, and sleep phases'''
 
         downnet_deltas, downnet_hidbias_deltas, downnet_visbias_delta, top_state = self.bottom_layers.wake_phase(data)
@@ -172,10 +171,10 @@ class DBN(object):
         #Train top level RBM using CD-k, this will adjust the weight matrix of top RBM alone
         if rbm_data_func is not None:
             top_state = rbm_data_func(top_state)
-        #self.top_layer_rbm.train(top_state, K, learning_rate, dropoutrate=0)
-
+        
+        self.top_layer_rbm.train(top_state, K, learning_rate, dropoutrate=0)
         #Get a vis state from RBM after CD-k, use this as data for top-down pass
-        top_state = self.top_layer_rbm.gibbs_given_v(top_state, K)[0]
+        #top_state = self.top_layer_rbm.gibbs_given_v(top_state, K)[0]
         if bn_data_func is not None:
             top_state = bn_data_func(top_state)
         upnet_deltas, upnet_bias_deltas = self.bottom_layers.sleep_phase(top_state)
