@@ -26,7 +26,7 @@ class RBM(NeuralNet):
         data = self.forward_pass(data, skip_layer=1)[1]
         return self.get_hidlayer().probs if prob else data
 
-    def sample_vis(self, data, prob=True):
+    def sample_vis(self, data, prob=False):
         '''Samples the visible layer of the rbm given the parameter data as the state of the hiddens'''
         data = self.backward_pass(data, skip_layer=1)[0]
         return self.get_vislayer().probs if prob else data
@@ -35,6 +35,7 @@ class RBM(NeuralNet):
         '''Performs K steps back and forth between hidden and visible starting from the parameter data as the state of the hiddens.
         data is assumed to be the current activation of h.'''
         hidact = data
+        visact = None
         for k in range(K):
             visact = self.sample_vis(dropout(hidact, dropoutrate))
             hidact = self.sample_hid(dropout(visact, dropoutrate), prob=True)
@@ -58,6 +59,7 @@ class RBM(NeuralNet):
         delta_bias_hid = zeros((1, self.numhid))
 
         #get the acivation probabilities for hidden units on each data case
+        self.get_vislayer().probs = data
         hidact_data = self.sample_hid(data)  # NxH matrix
         hidprobs_data = self.get_hidlayer().probs
 
@@ -93,3 +95,4 @@ class RBM(NeuralNet):
         self.layers[1].bias += delta_bias_hid
 
         print 'Reconstruction Error:', recons_error
+        return recons_error

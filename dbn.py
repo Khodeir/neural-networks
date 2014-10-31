@@ -38,6 +38,19 @@ class BN(object):
         self.downnet.layers[0].activities = data
         return self.downnet.forward_pass(data, 1)
 
+    def top_down_prob(self, data):
+        '''Expects data to be binary'''
+        self.downnet.layers[0].activities = data
+        last = len(self.downnet.weights)
+        data = dot(data, self.downnet.weights[0])
+
+        for i in range(1, self.downnet.numlayers):
+            self.downnet.layers[i].process(data)
+            data = self.downnet.layers[i].probs
+            if i < last:
+                data = dot(data, self.downnet.weights[i])
+        return [layer.activities for layer in self.downnet.layers]
+
 
     def __untie_weights__(self):
         '''This is an ugly step, and is only necessary when the db is initialized from RBMs.
@@ -95,11 +108,13 @@ class BN(object):
 
         downnet_deltas, top_state = self.wake_phase(data)
         upnet_deltas = self.sleep_phase(top_state) #The top state is the input for the top-down pass
-
+        recons_error = square(data - self.upnet.layers[0].probs).sum()
+        print 'BN Reconstruction Error', recons_error
         for i in range(len(downnet_deltas)):
             self.downnet.weights[i] += learning_rate*downnet_deltas[i]
         for i in range(len(upnet_deltas)):
             self.upnet.weights[i] += learning_rate*upnet_deltas[i]
+        return recons_error
 
 class DBN(object):
     def __init__(self, bottom_layers, top_layer_rbm):
@@ -142,14 +157,16 @@ class DBN(object):
         #Train top level RBM using CD-k, this will adjust the weight matrix of top RBM alone
         if rbm_data_func is not None:
             top_state = rbm_data_func(top_state)
-        self.top_layer_rbm.train(top_state, K, learning_rate, weightcost=0.1, dropoutrate=0)
+        #self.top_layer_rbm.train(top_state, K, learning_rate, dropoutrate=0)
 
         #Get a vis state from RBM after CD-k, use this as data for top-down pass
-        top_state = self.top_layer_rbm.sample_vis(self.top_layer_rbm.sample_hid(top_state))
+        top_state = self.top_layer_rbm.gibbs_given_v(top_state, K)[0]
         if bn_data_func is not None:
             top_state = bn_data_func(top_state)
         upnet_deltas = self.bottom_layers.sleep_phase(top_state)
 
+        recons_error = square(data - self.bottom_layers.upnet.layers[0].probs).sum()
+        print 'DBN Reconstruction Error', recons_error
         for i in range(len(downnet_deltas)):
             self.bottom_layers.downnet.weights[i] += learning_rate*downnet_deltas[i]
         for i in range(len(upnet_deltas)):
