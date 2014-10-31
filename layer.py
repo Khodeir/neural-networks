@@ -63,6 +63,11 @@ class LinearLayer(Layer):
         self.activities = weighted_input + self.repbias(weighted_input)
         return self.activities
 
+class LinearThresholdLayer(Layer):
+    def process(self, weighted_input):
+        activity = weighted_input + self.repbias(weighted_input)
+        self.activities = activity*(activity >= 0) #If activity is negative, output a 0
+        return self.activities
 
 class BinaryThresholdLayer(Layer):
     def process(self, weighted_input):
