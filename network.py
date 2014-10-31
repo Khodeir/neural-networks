@@ -1,5 +1,6 @@
 from numpy import *
 from layer import *
+from scipy.io import savemat, loadmat
 import matplotlib.pyplot as plt
 
 
@@ -62,6 +63,97 @@ class NeuralNet(object):
         assert self.layers[i+1].size == mapN * mapM, 'Number of units in the i+1th layer must equal mapN*mapM'
         vh = transpose(self.weights[i])
         return data_map(vh, (featN, featM), (mapN, mapM))
+
+    def flatten_parameters(self):
+        '''Returns all the network parameters in one vector, weights first, then biases.'''
+        parameters = []
+        for matrix in self.weights:
+            parameters = concatenate((parameters, matrix.flatten()),1)
+        for layer in self.layers[1:]:
+            parameters = concatenate((parameters, layer.bias.flatten()),1)
+
+        return parameters
+
+    def set_parameters(self, parameters):
+        '''Takes flattened network parameters and sets the network's parameters to those.'''
+        layer_sizes = [layer.size for layer in self.layers]
+        net_size = 0
+        for i in range(0, len(layer_sizes)-1):
+            net_size += layer_sizes[i]*layer_sizes[i+1]
+            net_size += layer_sizes[i+1]
+
+        assert len(parameters) == net_size, "The parameters don't match the dimensions of the net"
+        weights = []
+        count = 0
+        for i in range(0, len(layer_sizes)-1):
+            weight = parameters[count: (count + layer_sizes[i]*layer_sizes[i+1])]
+            matrix = weight.reshape((layer_sizes[i],layer_sizes[i+1]))
+            weights.append(matrix)
+            count += (layer_sizes[i]*layer_sizes[i+1])
+
+        for i in range(1,len(layer_sizes)): #Set biases of all the layers, excluding bottom layer
+            self.layers[i].bias = (parameters[count:count+layer_sizes[i]])
+            count += layer_sizes[i]
+
+        self.weights = weights
+
+    def save_network(self, filename):
+        '''Save the network's parameters in a .mat file.'''
+        data = {}
+        data['numlayers'] = self.numlayers
+
+        for i in range(1, self.numlayers):
+            data['weights_' + str(i-1)] = self.weights[i-1]
+            data['bias_' + str(i)] = self.layers[i].bias
+
+        savemat(filename, data)
+
+    def load_network(self, filename):
+        '''Load network parameters from a .mat file and set it to the parameters of this network.'''
+        data = loadmat(filename)
+        weights, biases = [],[]
+        for i in range(1, self.numlayers):
+            self.weights[i-1] = data.get('weights_' + str(i-1))
+            self.layers[i].bias = data.get('bias_' + str(i))
+
+    def weight_histogram(self, index=None):
+        '''Plot a weight histogram for this net. Optional parameter index to specify a particular weight matrix.'''
+        vishid = []
+        if index == None:
+            for matrix in self.weights[:]:
+                flat = matrix.flatten()
+                for weight in flat:
+                    vishid.append(weight)
+        else:
+            weights = self.weights[index][:].flatten()
+            for weight in weights:
+                vishid.append(weight)
+
+        plt.figure()
+        plt.xlabel("Size of Weights")
+        plt.ylabel("Frequency")
+        plt.hist(vishid, bins=300)
+        plt.show()
+        return vishid
+
+    def bias_histogram(self, index=None):
+        '''Plot a bias histogram for this net. Optional parameter index to specify a particular layer.'''
+        biases = []
+        if index == None:
+            for layer in self.layers[:]:
+                for bias in layer.bias:
+                    biases.append(bias)
+        else:
+            layer_bias = self.layers[index][:].bias
+            for bias in self.layers[index][:].bias:
+                biases.append(bias)
+
+        plt.figure()
+        plt.xlabel("Size of Weights")
+        plt.ylabel("Frequency")
+        plt.hist(vishid, bins=300)
+        plt.show()
+        return biases
 
 def dropout(data, rate=0.2):
     drop = random.binomial(1, rate, data.shape)
