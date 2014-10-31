@@ -125,17 +125,18 @@ class DBN(object):
         activities = self.bottom_layers.top_down(visprobs_top_rbm)
         return activities
 
-    def contrastive_wake_sleep(self, data, K=1, learning_rate=1): #Changed default learning rate, now it seems to be more useful
+    def contrastive_wake_sleep(self, data, K=1, learning_rate=1, rbm_data_func=None): #Changed default learning rate, now it seems to be more useful
         '''Combines wake, CD, and sleep phases'''
         
         downnet_deltas, top_state = self.wake_phase(data)
 
         #Use samples of the top of the net as the input data of the top level RBM
         #Train top level RBM using CD-k, this will adjust the weight matrix of top RBM alone
-        top_layer_rbm.train(top_state, K, epochs=1, learning_rate, weightcost=0.1, dropoutrate=0))
+        if rbm_data_func is not None:
+            top_state = rbm_data_func(top_state)
+        self.top_layer_rbm.train(top_state, K, 1, learning_rate, weightcost=0.1, dropoutrate=0)
 
-        top_activities = top_layer_rbm.get_vislayer().activities
-        top_state = sample_binary_stochastic(top_activities)
+        top_state = self.top_layer_rbm.get_vislayer().activities
         #Get a vis state from RBM after CD-k, use this as data for top-down pass
         upnet_deltas = self.sleep_phase(top_state)
 

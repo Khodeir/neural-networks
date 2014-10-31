@@ -10,7 +10,7 @@ class RBM(NeuralNet):
         self.numvis = numvis
         self.numhid = numhid
         weights = [vishid] if vishid is not None else None
-        NeuralNet.__init__(self, [vislayer or LogisticLayer(numvis), hidlayer or LogisticLayer(numhid)], weights)
+        NeuralNet.__init__(self, [vislayer or BinaryStochasticLayer(numvis), hidlayer or BinaryStochasticLayer(numhid)], weights)
 
     def get_vislayer(self):
         return self.layers[0]
@@ -23,31 +23,29 @@ class RBM(NeuralNet):
 
     def sample_hid(self, data):
         '''Samples the hidden layer of the rbm given the parameter data as the state of the visibles'''
-        hidprob = self.forward_pass(data, skip_layer=1)[1]
-        return hidprob
+        return self.forward_pass(data, skip_layer=1)[1]
 
     def sample_vis(self, data):
         '''Samples the visible layer of the rbm given the parameter data as the state of the hiddens'''
-        visprob = self.backward_pass(data, skip_layer=1)[0]
-        return visprob
+        return self.backward_pass(data, skip_layer=1)[0]
 
     def gibbs_given_h(self, data, K, dropoutrate=0):
-        '''Performs K steps back and forth between hidden and visible starting from the parameter data as the state of the hiddens'''
+        '''Performs K steps back and forth between hidden and visible starting from the parameter data as the state of the hiddens.
+        data is assumed to be the current activation of h.'''
+        hidact = data
         for k in range(K):
-            hidstates = sample_binary_stochastic(data)
-            visprobs_cd = self.sample_vis(dropout(hidstates, dropoutrate))
-            visstates = sample_binary_stochastic(visprobs_cd)
-            hidprobs_cd = self.sample_hid(dropout(visstates, dropoutrate))
-        return visprobs_cd, hidprobs_cd
+            visact = self.sample_vis(dropout(hidact, dropoutrate))
+            hidact = self.sample_hid(dropout(visact, dropoutrate))
+        return visact, hidact
 
     def gibbs_given_v(self, data, K, dropoutrate=0):
-        '''Performs K steps back and forth between visible and hidden starting from the parameter data as the state of the visibles'''
+        '''Performs K steps back and forth between visible and hidden starting from the parameter data as the state of the visibles.
+        data is assumed to be the current activation of v'''
+        visact = data
         for k in range(K):
-            visstates = sample_binary_stochastic(data)
-            hidprobs_cd = self.sample_hid(dropout(visstates, dropoutrate))
-            hidstates = sample_binary_stochastic(hidprobs_cd)
-            visprobs_cd = self.sample_vis(dropout(hidstates, dropoutrate))
-        return visprobs_cd, hidprobs_cd
+            hidact = self.sample_hid(dropout(visact, dropoutrate))
+            visact = self.sample_vis(dropout(hidact, dropoutrate))
+        return visact, hidact
 
     def train(self, data, K, epochs, learning_rate=0.1, weightcost=0.1, momentum=0.7, dropoutrate=0):
         '''Train the network using normalized data and CD-K for epochs epochs'''
@@ -60,7 +58,8 @@ class RBM(NeuralNet):
   #start epochs
         for epoch in range(epochs):
             #get the acivation probabilities for hidden units on each data case
-            hidprobs_data = self.sample_hid(data)  # NxH matrix
+            hidact_data = self.sample_hid(data)  # NxH matrix
+            hidprobs_data = self.get_hidlayer().probs
 
             #compute the positive term in cd learning rule, Expected(sisj)_data
             expect_pairact_data = dot(transpose(data), hidprobs_data)
@@ -70,7 +69,8 @@ class RBM(NeuralNet):
             expect_bias_vis_data = data.sum(0)
 
             #now we get the logistic output after K steps of gibbs sampling and use that as probability of turning on
-            visprobs_cd, hidprobs_cd = self.gibbs_given_h(hidprobs_data, K, dropoutrate)
+            self.gibbs_given_h(hidact_data, K, dropoutrate)
+            visprobs_cd, hidprobs_cd = self.get_vislayer().probs, self.get_hidlayer().probs
 
             #now we compute the negative statistics for contrastive divergence, Expected(sisj)_model
             expect_pairact_cd = dot(transpose(visprobs_cd), hidprobs_cd)
