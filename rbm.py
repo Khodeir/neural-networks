@@ -1,4 +1,4 @@
-from layer import LogisticLayer
+from layer import *
 from network import NeuralNet, sample_binary_stochastic, dropout
 from numpy import *
 

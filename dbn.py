@@ -43,18 +43,17 @@ class BN(object):
 
     def wake_phase(self, data):
         '''The first step of wake-sleep and contrastive wake-sleep. Returns wake_deltas, a list of matrices by which the
-        the weights of the down net should be adjusted. Also returns hidden states of top layer.'''
-        #Get the activities (probabilities) of every layer after doing a bottom-up pass
-        #hid_probs is a list of lists, each one containing the activations for each layer, starting with lowest layer. 
-        hid_probs = self.bottom_up(data)
-        #Get binary states for these layers stochastically.
-        hid_states = []
-        for layer in hid_probs:
-            hid_states.append(sample_binary_stochastic(layer))
+        the weights of the down net should be adjusted. Also returns hidden states of top layer. Assumes DBN layers are 
+        binary stochastic layers.'''
+        #Get the states and probabilities of every layer after doing a bottom-up pass
+        hid_states = self.bottom_up(data)
+        hid_probs = []
+        for layer in self.upnet.layers:
+            hid_probs.append(layer.probs)
 
         wake_deltas = []
-
-        for i in range(upnet.numlayers -1) #Iterate over each layer excluding bottom layer
+        #Iterate over each layer excluding bottom layer
+        for i in range(self.upnet.numlayers -1):
             upper_state = hid_states[i+1]
             lower_state = hid_states[i]
             lower_activity = hid_probs[i]
@@ -67,17 +66,14 @@ class BN(object):
 
     def sleep_phase(self, data):
         '''The last step of wake-sleep and contrastive wake-sleep. Returns sleep_deltas, a list of matrices by which the
-        the weights of the up net should be adjusted. '''
-        #Get the activities (probabilities) of every layer after doing a top-down pass
-        #hid_probs is a list of lists, each one containing the activations for each layer, starting with top layer. 
-        hid_probs = self.top_down(data)
-        #Get binary states for these layers stochastically.
-        hid_states = []
-        for layer in hid_probs:
-            hid_states.append(sample_binary_stochastic(layer))
+        the weights of the up net should be adjusted. Assumes DBN layers are binary stochastic layers.'''
+        #Get the states and probabilities of every layer after doing a top-down pass
+        hid_states = self.top_down(data)
+        hid_probs = []
+        for layer in self.downnet.layers:
+            hid_probs.append(layer.probs)
 
         sleep_deltas = []
-
         #Iterate over each layer excluding top layer
         for i in range(self.downnet.numlayers -1):
             lower_state = hid_states[i+1]
@@ -129,7 +125,7 @@ class DBN(object):
         activities = self.bottom_layers.top_down(visprobs_top_rbm)
         return activities
 
-    def contrastive_wake_sleep(self, data, K=1, learning_rate=0.1):
+    def contrastive_wake_sleep(self, data, K=1, learning_rate=1): #Changed default learning rate, now it seems to be more useful
         '''Combines wake, CD, and sleep phases'''
         
         downnet_deltas, top_state = self.wake_phase(data)
