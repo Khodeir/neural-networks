@@ -21,13 +21,15 @@ class RBM(NeuralNet):
     def get_vishid(self):
         return self.weights[0]
 
-    def sample_hid(self, data):
+    def sample_hid(self, data, prob=False):
         '''Samples the hidden layer of the rbm given the parameter data as the state of the visibles'''
-        return self.forward_pass(data, skip_layer=1)[1]
+        data = self.forward_pass(data, skip_layer=1)[1]
+        return self.get_hidlayer().probs if prob else data
 
-    def sample_vis(self, data):
+    def sample_vis(self, data, prob=True):
         '''Samples the visible layer of the rbm given the parameter data as the state of the hiddens'''
-        return self.backward_pass(data, skip_layer=1)[0]
+        data = self.backward_pass(data, skip_layer=1)[0]
+        return self.get_vislayer().probs if prob else data
 
     def gibbs_given_h(self, data, K, dropoutrate=0):
         '''Performs K steps back and forth between hidden and visible starting from the parameter data as the state of the hiddens.
@@ -35,7 +37,7 @@ class RBM(NeuralNet):
         hidact = data
         for k in range(K):
             visact = self.sample_vis(dropout(hidact, dropoutrate))
-            hidact = self.sample_hid(dropout(visact, dropoutrate))
+            hidact = self.sample_hid(dropout(visact, dropoutrate), prob=True)
         return visact, hidact
 
     def gibbs_given_v(self, data, K, dropoutrate=0):
@@ -47,7 +49,7 @@ class RBM(NeuralNet):
             visact = self.sample_vis(dropout(hidact, dropoutrate))
         return visact, hidact
 
-    def train(self, data, K, epochs, learning_rate=0.1, weightcost=0.1, momentum=0.7, dropoutrate=0):
+    def train(self, data, K, learning_rate=0.1, weightcost=0.1, dropoutrate=0):
         '''Train the network using normalized data and CD-K for epochs epochs'''
         assert self.numvis == data.shape[1], "Data does not match number of visible units."
         #got to initialize some vars
@@ -55,45 +57,39 @@ class RBM(NeuralNet):
         delta_bias_vis = zeros((1, self.numvis))
         delta_bias_hid = zeros((1, self.numhid))
 
-  #start epochs
-        for epoch in range(epochs):
-            #get the acivation probabilities for hidden units on each data case
-            hidact_data = self.sample_hid(data)  # NxH matrix
-            hidprobs_data = self.get_hidlayer().probs
+        #get the acivation probabilities for hidden units on each data case
+        hidact_data = self.sample_hid(data)  # NxH matrix
+        hidprobs_data = self.get_hidlayer().probs
 
-            #compute the positive term in cd learning rule, Expected(sisj)_data
-            expect_pairact_data = dot(transpose(data), hidprobs_data)
+        #compute the positive term in cd learning rule, Expected(sisj)_data
+        expect_pairact_data = dot(transpose(data), hidprobs_data)
 
-            #The same quantitiy for our biases, Expected(si)_data (i.e. bias unit is always 1)
-            expect_bias_hid_data = hidprobs_data.sum(0)
-            expect_bias_vis_data = data.sum(0)
+        #The same quantitiy for our biases, Expected(si)_data (i.e. bias unit is always 1)
+        expect_bias_hid_data = hidprobs_data.sum(0)
+        expect_bias_vis_data = data.sum(0)
 
-            #now we get the logistic output after K steps of gibbs sampling and use that as probability of turning on
-            self.gibbs_given_h(hidact_data, K, dropoutrate)
-            visprobs_cd, hidprobs_cd = self.get_vislayer().probs, self.get_hidlayer().probs
+        #now we get the logistic output after K steps of gibbs sampling and use that as probability of turning on
+        self.gibbs_given_h(hidact_data, K, dropoutrate)
+        visprobs_cd, hidprobs_cd = self.get_vislayer().probs, self.get_hidlayer().probs
 
-            #now we compute the negative statistics for contrastive divergence, Expected(sisj)_model
-            expect_pairact_cd = dot(transpose(visprobs_cd), hidprobs_cd)
+        #now we compute the negative statistics for contrastive divergence, Expected(sisj)_model
+        expect_pairact_cd = dot(transpose(visprobs_cd), hidprobs_cd)
 
-            #again negative stats for learning the biases
-            expect_bias_hid_cd = hidprobs_cd.sum(0)
-            expect_bias_vis_cd = visprobs_cd.sum(0)
+        #again negative stats for learning the biases
+        expect_bias_hid_cd = hidprobs_cd.sum(0)
+        expect_bias_vis_cd = visprobs_cd.sum(0)
 
-            recons_error = square(data - visprobs_cd).sum()
+        recons_error = square(data - visprobs_cd).sum()
 
-            #learning time
+        #learning time
 
-            N = float(data.shape[0])
-            delta_vishid *= momentum
-            delta_vishid += (learning_rate/N)*((expect_pairact_data - expect_pairact_cd) - weightcost*self.weights[0])
+        N = float(data.shape[0])
+        delta_vishid += (learning_rate/N)*((expect_pairact_data - expect_pairact_cd) - weightcost*self.weights[0])
+        # delta_bias_vis += (learning_rate/N)*(expect_bias_vis_data - expect_bias_vis_cd)
+        delta_bias_hid += (learning_rate/N)*(expect_bias_hid_data - expect_bias_hid_cd)
 
-            # delta_bias_vis *= momentum
-            # delta_bias_vis += (learning_rate/N)*(expect_bias_vis_data - expect_bias_vis_cd)
-            delta_bias_hid *= momentum
-            delta_bias_hid += (learning_rate/N)*(expect_bias_hid_data - expect_bias_hid_cd)
+        self.weights[0] += delta_vishid
+        self.layers[0].bias += delta_bias_vis
+        self.layers[1].bias += delta_bias_hid
 
-            self.weights[0] += delta_vishid
-            self.layers[0].bias += delta_bias_vis
-            self.layers[1].bias += delta_bias_hid
-
-            print 'Reconstruction Error:', recons_error
+        print 'Reconstruction Error:', recons_error

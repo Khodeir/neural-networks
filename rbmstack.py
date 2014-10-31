@@ -1,5 +1,6 @@
 from scipy.io import savemat, loadmat
 from rbm import RBM
+from layer import sample_binary_stochastic
 class RBMStack(object):
     def __init__(self, data, rbms):
         '''Assumes for all rbm[i] in rbms, rbm[i].numhid == rbm[i+1].numvis'''
@@ -7,19 +8,21 @@ class RBMStack(object):
         self.data = data
 
     def data_for(self, mac_i):
-        data = self.data
+        probs = data = self.data
         for mac in self.rbms[0:mac_i]:
             data = mac.sample_hid(data)
-        return data
+            probs = mac.get_hidlayer().probs
+        return data, probs
 
-    def train(self, macindex, K=1, epochs=100, learning_rate=0.1, weightcost=0.1, dropoutrate=0):
-        data = self.data_for(macindex)
-        self.rbms[macindex].train(data, K, epochs, learning_rate, weightcost, dropoutrate)
+    def train(self, macindex, K=1, epochs=100, learning_rate=0.1, weightcost=0.1, dropoutrate=0, data=None):
+        data = data if data is not None else self.data_for(macindex)[1]
+        for epoch in range(epochs):
+            self.rbms[macindex].train(data, K, learning_rate, weightcost, dropoutrate)
 
     def top_down(self, case):
-        for mac in self.rbms[1:][::-1]:
+        for mac in self.rbms[::-1]:
             case = mac.sample_vis(case)
-        return self.rbms[0].sample_vis(case)
+        return case
 
     def bottom_up(self, case):
         for mac in self.rbms:

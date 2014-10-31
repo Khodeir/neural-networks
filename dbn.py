@@ -101,8 +101,6 @@ class DBN(object):
         '''Initializes a DBN consisting of an RBM on top of a BN.'''
         self.bottom_layers = bottom_layers
         self.top_layer_rbm = top_layer_rbm
-        assert top_layer_rbm.get_vislayer() is bottom_layers.upnet.layers[-1]
-        assert top_layer_rbm.get_vislayer() is bottom_layers.downnet.layers[0]
 
     @classmethod
     def from_rbms(cls, rbms):
@@ -111,34 +109,44 @@ class DBN(object):
 
         bottom_layers = BN.from_rbms(rbms[:numrbms-1])
         top_layer_rbm = rbms[numrbms-1]
-        top_layer_rbm.layers[0] = rbms[numrbms-2].get_hidlayer()
 
         return cls(bottom_layers, top_layer_rbm)
         # BN(layers[:numlayers-1], btm_lyrs_up_weights, btm_lyrs_down_weights)
         # RBM.from_layers(self.bottom_layers[-1], layers[numlayers-1], top_rbm_vishid)
 
-    def generate_data(self, startingstate, k):
+    def generate_data(self, startingstate, k, visdata_func=None, bn_data_func=None):
         '''To generate data from the dbn, we perform k steps of gibbs sampling given the
         state of the hiddens of the top_layer_rbm, then do a top_down pass on the bottom_layers'''
-        print 'starting gibbs with', startingstate.shape
-        visprobs_top_rbm = self.top_layer_rbm.gibbs_given_h(startingstate, k)[0]
-        activities = self.bottom_layers.top_down(visprobs_top_rbm)
+        hidstates = startingstate
+        for i in range(k):
+            visstates = self.top_layer_rbm.sample_vis(startingstate)
+            if visdata_func is not None:
+                visstates = visdata_func(visstates)
+            hidstates = self.top_layer_rbm.sample_hid(visstates)
+        if bn_data_func is not None:
+            visstates = bn_data_func(visstates)
+        activities = self.bottom_layers.top_down(visstates)
         return activities
 
-    def contrastive_wake_sleep(self, data, K=1, learning_rate=1, rbm_data_func=None): #Changed default learning rate, now it seems to be more useful
+    def contrastive_wake_sleep(self, data, K=1, learning_rate=1, rbm_data_func=None, bn_data_func=None): #Changed default learning rate, now it seems to be more useful
         '''Combines wake, CD, and sleep phases'''
-        
-        downnet_deltas, top_state = self.wake_phase(data)
+
+        downnet_deltas, top_state = self.bottom_layers.wake_phase(data)
+        top_prob = self.bottom_layers.upnet.layers[-1].probs
 
         #Use samples of the top of the net as the input data of the top level RBM
         #Train top level RBM using CD-k, this will adjust the weight matrix of top RBM alone
         if rbm_data_func is not None:
             top_state = rbm_data_func(top_state)
-        self.top_layer_rbm.train(top_state, K, 1, learning_rate, weightcost=0.1, dropoutrate=0)
+            top_prob = rbm_data_func(top_prob)
+        self.top_layer_rbm.train(top_prob, K, learning_rate, weightcost=0.1, dropoutrate=0)
 
-        top_state = self.top_layer_rbm.get_vislayer().activities
         #Get a vis state from RBM after CD-k, use this as data for top-down pass
-        upnet_deltas = self.sleep_phase(top_state)
+        top_state = self.top_layer_rbm.get_vislayer().activities
+
+        if bn_data_func is not None:
+            top_state = bn_data_func(top_state)
+        upnet_deltas = self.bottom_layers.sleep_phase(top_state)
 
         for i in range(len(downnet_deltas)):
             self.bottom_layers.downnet.weights[i] += learning_rate*downnet_deltas[i]
