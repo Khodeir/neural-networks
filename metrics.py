@@ -141,7 +141,7 @@ def error(net, data, T, decay_rate=0):
 def gradcheck(network, layer, data, targets):
     '''Checks gradients obtained by backpropagation by getting gradients numerically'''
     dE_dW = []
-    epsilon = 0.0001
+    epsilon = 0.00001
 
     weights = network.get_weights()
     temp_weights = weights[:]  # Make a copy and work with that so nothing weird happens
@@ -159,7 +159,7 @@ def gradcheck(network, layer, data, targets):
             network.set_weights(temp_weights)
             error2 = error(network, data, targets)
 
-            grad = ((error1 - error2)/(2*epsilon))/data.shape[0]
+            grad = ((error1 - error2)/(2*epsilon))
             dE_dW.append(grad)
 
             wmatrix[i][j] += epsilon

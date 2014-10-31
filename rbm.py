@@ -55,13 +55,9 @@ class RBM(NeuralNet):
         visprobs = self.get_vislayer().probs
         return square(data - visprobs).sum()
 
-    def train(self, data, K, learning_rate=0.1, weightcost=0.0001, dropoutrate=0):
+    def train(self, data, K, learning_rate=0.05, bias_learn_rate =0.1, weightcost=0.0001, dropoutrate=0):
         '''Train the network using normalized data and CD-K for epochs epochs'''
         assert self.numvis == data.shape[1], "Data does not match number of visible units."
-        #got to initialize some vars
-        #delta_vishid = zeros((self.numvis, self.numhid))
-        #delta_bias_vis = zeros((1, self.numvis))
-        #delta_bias_hid = zeros((1, self.numhid))
 
         #get the acivation probabilities for hidden units on each data case
         self.get_vislayer().probs = data
@@ -92,8 +88,8 @@ class RBM(NeuralNet):
 
         N = float(data.shape[0])
         delta_vishid = (learning_rate/N)*((expect_pairact_data - expect_pairact_cd) - weightcost*self.weights[0])
-        # delta_bias_vis += (learning_rate/N)*(expect_bias_vis_data - expect_bias_vis_cd)
-        delta_bias_hid = (learning_rate/N)*(expect_bias_hid_data - expect_bias_hid_cd)
+        # delta_bias_vis += (bias_learn_rate/N)*(expect_bias_vis_data - expect_bias_vis_cd)
+        delta_bias_hid = (bias_learn_rate/N)*(expect_bias_hid_data - expect_bias_hid_cd)
 
         self.weights[0] += delta_vishid
         #self.layers[0].bias += delta_bias_vis

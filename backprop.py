@@ -35,6 +35,17 @@ def backprop(network, data, targets, skip_layers=0):
         network_dE_dB.insert(0, dE_dB)
     return network_dE_dW, network_dE_dB
 
+def flat_grad(network, data, targets):
+    '''Return gradients as a single row vector, to be passed to optimisation algorithms. Ascending order of layer de/dWs, then layer dE/dBs'''
+    a,b = backprop(network, data, targets)
+    flat_grad = []
+
+    for matrix in a:
+        flat_grad = concatenate((flat_grad, matrix.flatten()),1)
+    for matrix in b:
+        flat_grad = concatenate((flat_grad, matrix.flatten()),1)
+
+    return flat_grad
 
 def train(net, X, T, learning_rate=0.1, decay_rate=0):
     '''Perform one iteration of backpropagation training on net using inputs X and targets T and a learning_rate'''
@@ -53,9 +64,8 @@ def train(net, X, T, learning_rate=0.1, decay_rate=0):
 def testNet():
     '''Small multi-layer test net for gradient checking, presumably if this works then any sized net works'''
     net = NeuralNet([LinearLayer(4), LogisticLayer(5), LogisticLayer(3)])
-    data = array([[1, 4, 3, 5], [2.2, 3.1, 0.5, -2], [-0.3, 1, 1, 2.1]])  # Data with 3 training examples
-    targets = array([[0.2, 0.4, -0.1], [1, 2, 3], [-1, -2, -3]])  # 3 targets
-
+    data = array([[1, 4, 3, 5], [2.2, 3.1, 0.5, -2], [-0.3, 1, 1, 2.1], [4,2,3,2]])  # Data with 4 training examples
+    targets = array([[0.2, 0.4, -0.1], [1, 2, 3], [-1, -2, -3],[1,1,1]])  # 4 targets
     dE_dW1, dE_dB1 = backprop(net, data, targets)
     print 'Gradients from backprop: '
     print dE_dW1

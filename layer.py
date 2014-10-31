@@ -56,6 +56,9 @@ class BinaryStochasticLayer(LogisticLayer):
         self.probs = LogisticLayer.process(self, weighted_input)
         self.activities = sample_binary_stochastic(self.probs)
         return self.activities
+    def gradient(self):
+        #Use probs instead of activities, dy/dz = y*(1-y). So that backprop works with BinaryStochastic
+        return self.probs * (1 - self.probs)
 
 class LinearLayer(Layer):
     def process(self, weighted_input):
