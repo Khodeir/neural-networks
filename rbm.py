@@ -94,5 +94,5 @@ class RBM(NeuralNet):
         self.layers[0].bias += delta_bias_vis
         self.layers[1].bias += delta_bias_hid
 
-        print 'Reconstruction Error:', recons_error
+        #print 'Reconstruction Error:', recons_error
         return recons_error

@@ -8,7 +8,7 @@ class BN(object):
         '''Initializes a BN from the layers given'''
         self.numlayers = len(layers)
 
-        down_layers = [layer.__class__.from_layer(layer) for layer in layers[::-1]]#Copy the list so that upnet and downnet layers are different objects
+        down_layers = [layer.__class__.from_layer(layer) for layer in layers[::-1]]#Copy list so that upnet and downnet layers are different objects
         self.upnet = NeuralNet(layers, up_weights)
         self.downnet = NeuralNet(down_layers, down_weights)
 
@@ -180,7 +180,7 @@ class DBN(object):
             top_state = bn_data_func(top_state)
         upnet_deltas, upnet_bias_deltas = self.bottom_layers.sleep_phase(top_state)
 
-        recons_error = square(data - self.bottom_layers.upnet.layers[0].probs).sum()
+        recons_error = square(data - self.bottom_layers.downnet.layers[-1].probs).sum()
         print 'DBN Reconstruction Error', recons_error
 
         self.bottom_layers.downnet.layers[-1].bias += learning_rate*downnet_visbias_delta
