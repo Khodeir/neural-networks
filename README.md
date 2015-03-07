@@ -18,7 +18,7 @@ A short example usecase (data not actually provided):
     training_data = mnist['train']
     validation_data = mnist['valid']
     
-    model = NeuralNet([LineaLayer(784), LogisticLayer(1000), SoftMaxLayer(10)])
+    model = NeuralNet([LinearLayer(784), LogisticLayer(1000), SoftMaxLayer(10)])
     
     epochs = 1000
     
